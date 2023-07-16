@@ -1,9 +1,4 @@
 "use client";
-export const metadata = {
-    title: 'Request Form - Anzi!',
-    description: 'Anzi is a project that aims to provide a simple and easy to use solution for the problem of finding addresses African countries.',
-    }
-      
 import Features from '@/components/features2'
 import Footer from '@/components/ui/footer'
 import Link from 'next/link'
