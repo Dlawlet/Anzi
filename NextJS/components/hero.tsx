@@ -26,7 +26,7 @@ export default function Hero() {
           <div className="max-w-8xl mx-auto text-center pb-12 md:pb-16">
             <h1 className="h1 mb-4" data-aos="fade-up">Welcome to Anzi!</h1>
             <h1 className="h1 mb-4" data-aos="fade-up">Unlock the Power of Addressing</h1>
-            <p className="text-xl text-gray-400 mb-8" data-aos="fade-up" data-aos-delay="200">At Anzi, we believe that every location deserves a place on the map. We're on a mission to revolutionize the way addresses are managed and utilized in African countries and cities. Say goodbye to the frustration of uncharted territories and inaccessible deliveries.</p>
+            <p className="text-xl text-gray-400 mb-8" data-aos="fade-up" data-aos-delay="200">At Anzi, we believe that every location deserves a place on the map. We&apos;re on a mission to revolutionize the way addresses are managed and utilized in African countries and cities. Say goodbye to the frustration of uncharted territories and inaccessible deliveries.</p>
             <div className="max-w-xs mx-auto sm:max-w-none sm:flex sm:justify-center">
               <div data-aos="fade-up" data-aos-delay="400">
                 <a className="btn text-white bg-brown-600 hover:bg-brown-700 w-full mb-4 sm:w-auto sm:mb-0" href="/request_address">Request an Address</a>

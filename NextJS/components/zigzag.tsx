@@ -12,9 +12,9 @@ export default function Zigzag() {
 
           {/* Section header */}
           <div className="max-w-6xl mx-auto text-center pb-12 md:pb-16">
-            <div className="inline-flex text-sm font-semibold py-1 px-3 m-2 text-green-600 bg-green-200 rounded-full mb-4">Let's Reach goals that matter</div>
+            <div className="inline-flex text-sm font-semibold py-1 px-3 m-2 text-green-600 bg-green-200 rounded-full mb-4">Let&apos;s Reach goals that matter</div>
             <h1 className="h2 mb-4">One product, unlimited solutions</h1>
-            <p className="text-xl text-gray-400">Official home or business Address is not a fancy thing, it's a necessity. Anzi is the first and only addressing system that is designed to give every home and business a unique address.</p>
+            <p className="text-xl text-gray-400">Official home or business Address is not a fancy thing, it&apos;s a necessity. Anzi is the first and only addressing system that is designed to give every home and business a unique address.</p>
           </div>
 
           {/* Items */}
@@ -67,7 +67,7 @@ export default function Zigzag() {
                 <div className="md:pl-4 lg:pl-12 xl:pl-16">
                   <div className="font-architects-daughter text-xl text-brown-600 mb-2">Beauty of formalism</div>
                   <h3 className="h3 mb-3">Create a better tomorrow</h3>
-                  <p className="text-xl text-gray-400 mb-4">Anzi is more than just an addressing system. It's a movement that is empowering communities and driving progress. By joining Anzi, you're not only improving your life, but also the lives of those around you, by embracing formalism to avoid confusion, scam and fraud.</p>
+                  <p className="text-xl text-gray-400 mb-4">Anzi is more than just an addressing system. It&apos;s a movement that is empowering communities and driving progress. By joining Anzi, you&apos;re not only improving your life, but also the lives of those around you, by embracing formalism to avoid confusion, scam and fraud.</p>
                   <ul className="text-lg text-gray-400 -mb-2">
                     <li className="flex items-center mb-2">
                       <svg className="w-3 h-3 fill-current text-green-500 mr-2 shrink-0" viewBox="0 0 12 12" xmlns="http://www.w3.org/2000/svg">

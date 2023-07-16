@@ -23,7 +23,7 @@ export default function Features() {
                 <br/>
                 If you are the first person to request an address on your street, you will be given the opportunity to name your street.  
                 <br/> 
-                Fantastic, isn't it? 
+                Fantastic, isn&apos;t it? 
 
               </p>
             </div>
