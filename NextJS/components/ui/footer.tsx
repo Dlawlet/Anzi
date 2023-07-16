@@ -21,7 +21,7 @@ export default function Footer() {
           <Link href="https://www.youtube.com/@hwork5585" className="inline-block" aria-label="Cruip">
             <Image src={logohw} width={160} height={160} alt="logo" />
           </Link>
-          <div className="text-gray-400 mt-2">Gombo</div>
+          <div className="text-gray-400 mt-2">Hwork</div>
         </div>
         
         {/* Add some space between logos */}

@@ -82,9 +82,14 @@ export default function ModalVideo({
                   <source src={video} type="video/mp4" />
                   Your browser does not support the video tag.
                 </video> */}
-                <iframe width= {videoWidth} height={videoHeight} src="https://mega.nz/embed/MzsUFTLS#J8Y14Ku2Tj6JGUDxvpomwjujJSAWGFpNqd8PVX2P8bA!1a"
-                
+                <iframe
+                  width={videoWidth}
+                  height={videoHeight}
+                  src="https://mega.nz/embed/MzsUFTLS#J8Y14Ku2Tj6JGUDxvpomwjujJSAWGFpNqd8PVX2P8bA!1a"
+                  allow="autoplay; loop"
                 ></iframe>
+
+
 
               </Dialog.Panel>
             </div>
