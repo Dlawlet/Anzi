@@ -2,8 +2,7 @@
 import Features from '@/components/features2'
 import Footer from '@/components/ui/footer'
 import Link from 'next/link'
-import React, { useRef, useEffect } from "react";
-import { NextRequest, NextResponse } from "next/server";
+import React from "react";
 
 export default function RequestForm() {
     // Handles the submit event on form submit.

@@ -1,4 +1,48 @@
+"use client";
+import React from "react";
 export default function Newsletter() {
+  // Handles the submit event on form submit.
+  const handleSubmit = async (event:any ) => {
+    // Stop the form from submitting and refreshing the page.
+    event.preventDefault()
+ 
+    // Get data from the form.
+    const data = {
+        email: event.target[0].value || "Unknown",
+        date : new Date().toLocaleString(),
+    }
+ 
+    // Send the data to the server in JSON format.
+    const JSONdata = JSON.stringify(data)
+ 
+    // API endpoint where we send form data.
+    const endpoint = '/api/mailing'
+ 
+    // Form the request for sending data to the server.
+    const options = {
+      // The method is POST because we are sending data.
+      method: 'POST',
+      // Tell the server we're sending JSON.
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      // Body of the request is the JSON data we created above.
+      body: JSONdata,
+    }
+ 
+    // Send the form data to our forms API on Vercel and get a response.
+    const response = await fetch(endpoint, options)
+    
+    // If the response is not OK, throw an error.
+    if (!response.ok) {
+        throw new Error(response.statusText)
+    }
+    else {
+    // Get the response data from server as JSON.
+    // If server returns the name submitted, that means the form works.
+    const result = await response.json()
+    alert(` Perfect! ${result.email} has been added to our mailing list!`)}
+  }
   return (
     <section>
       <div className="max-w-6xl mx-auto px-4 sm:px-6">
@@ -28,10 +72,10 @@ export default function Newsletter() {
             </div>
 
             {/* CTA form */}
-            <form className="w-full lg:w-1/2">
+            <form className="w-full lg:w-1/2" onSubmit={handleSubmit}>
               <div className="flex flex-col sm:flex-row justify-center max-w-xs mx-auto sm:max-w-md lg:max-w-none">
-                <input type="email" className="w-full appearance-none bg-brown-700 border border-brown-500 focus:border-brown-300 rounded-sm px-4 py-3 mb-2 sm:mb-0 sm:mr-2 text-white placeholder-brown-400" placeholder="Your best email…" aria-label="Your best email…" />
-                <a className="btn text-brown-600 bg-brown-100 hover:bg-white shadow" href="#0">Subscribe</a>
+                <input type="email" className="w-full appearance-none bg-brown-700 border border-brown-500 focus:border-brown-300 rounded-sm px-4 py-3 mb-2 sm:mb-0 sm:mr-2 text-white placeholder-brown-400" placeholder="Your best email…" aria-label="Your best email…" id="email"/>
+                <button className="btn text-brown-600 bg-brown-100 hover:bg-white shadow" type="submit">Subscribe</button>
               </div>
               {/* Success message */}
               {/* <p className="text-center lg:text-left lg:absolute mt-2 opacity-75 text-sm">Thanks for subscribing!</p> */}
