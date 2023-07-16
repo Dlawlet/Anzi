@@ -42,7 +42,7 @@ export default function Hero() {
             thumbWidth={1424}
             thumbHeight={1076}
             thumbAlt="Modal video thumbnail"
-            video="/videos/short-Doul.mp4"
+            video="https://www.mediafire.com/file/utr8qk8392bvza4/short-Doul.mp4/file"
             videoWidth={1920}
             videoHeight={1080}
 

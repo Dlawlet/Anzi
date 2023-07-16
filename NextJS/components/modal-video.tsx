@@ -78,10 +78,12 @@ export default function ModalVideo({
           >
             <div className="max-w-6xl mx-auto h-full flex items-center">
               <Dialog.Panel className="w-full max-h-full aspect-video bg-black overflow-hidden">
-                <video ref={videoRef} width={videoWidth} height={videoHeight} loop controls>
+                {/* <video ref={videoRef} width={videoWidth} height={videoHeight} loop controls>
                   <source src={video} type="video/mp4" />
                   Your browser does not support the video tag.
-                </video>
+                </video> */}
+                <iframe width= {videoWidth} height={videoHeight} frameborder="0" src="https://mega.nz/embed/MzsUFTLS#J8Y14Ku2Tj6JGUDxvpomwjujJSAWGFpNqd8PVX2P8bA!1a" allowfullscreen allow="autoplay;"></iframe>
+
               </Dialog.Panel>
             </div>
           </Transition.Child>
