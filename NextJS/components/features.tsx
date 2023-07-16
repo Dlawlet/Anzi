@@ -21,7 +21,7 @@ export default function Features() {
                 <path className="stroke-current text-brown-300" d="M43 42h-9M43 37h-9" strokeLinecap="square" strokeWidth="2" />
               </svg>
               <h4 className="h4 mb-2">Discover Addressing</h4>
-              <p className="text-lg text-gray-400 text-center">Imagine a world where every doorstep has a recognized address. With Anzi, we're breaking barriers and enabling seamless navigation, efficient logistics, and reliable deliveries, even in the most underserved areas of Africans cities.</p>
+              <p className="text-lg text-gray-400 text-center">Imagine a world where every doorstep has a recognized address. With Anzi, we&apos;re breaking barriers and enabling seamless navigation, efficient logistics, and reliable deliveries, even in the most underserved areas of Africans cities.</p>
             </div>
 
             {/* 2nd item */}
@@ -32,7 +32,7 @@ export default function Features() {
                 <path className="stroke-current text-brown-300" d="M26 28h12M26 32h12M26 36h5" strokeWidth="2" strokeLinecap="square" />
               </svg>
               <h4 className="h4 mb-2">Formalism Potential</h4>
-              <p className="text-lg text-gray-400 text-center">Say goodbye to confusion. With our international format addresses, you can now easily communicate your location to anyone, anywhere. Whether it's for directionning, emergency services, or e-commerce, our addresses are designed to make your life easier.</p>
+              <p className="text-lg text-gray-400 text-center">Say goodbye to confusion. With our international format addresses, you can now easily communicate your location to anyone, anywhere. Whether it&apos;s for directionning, emergency services, or e-commerce, our addresses are designed to make your life easier.</p>
             </div>
 
             {/* 3rd item */}
@@ -46,7 +46,7 @@ export default function Features() {
                 </g>
               </svg>
               <h4 className="h4 mb-2">Connection</h4>
-              <p className="text-lg text-gray-400 text-center">We're bridging the gap between technology and the real world. Our innovative mapping service empowers local communities, small businesses, and individuals to put themselves on the map, creating opportunities for growth and prosperity.</p>
+              <p className="text-lg text-gray-400 text-center">We&apos;re bridging the gap between technology and the real world. Our innovative mapping service empowers local communities, small businesses, and individuals to put themselves on the map, creating opportunities for growth and prosperity.</p>
             </div>
           
 

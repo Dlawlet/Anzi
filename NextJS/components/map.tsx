@@ -6,10 +6,7 @@ const MapboxGeocoder = require("mapbox-gl-geocoder");
 import "../app/css/MapComponent.css";
 import { NextRequest, NextResponse } from "next/server";
 
-export default async function MapComponent(
-  req: NextRequest,
-  res: NextResponse
-) {
+export default function MapComponent({ req, res }: { req: NextRequest, res: NextResponse }) {
   const mapContainer = useRef(null);
   const markerRef = useRef<mapboxgl.Marker | null>(null);
   const searchMarkerRef = useRef<mapboxgl.Marker | null>(null);
