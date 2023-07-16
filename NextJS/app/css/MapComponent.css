@@ -1,0 +1,24 @@
+/* MapComponent.css */
+
+/* Target the geocoder input element */
+.mapboxgl-ctrl-geocoder input {
+    color: Black; /* Set the desired text color here */
+    font-size: medium;
+  }
+.mapboxgl-ctrl-geocoder .suggestions {
+    color: Black; /* Set the desired text color here */
+    font-size: large;
+    background-color: #ffffff98; 
+  }
+
+.mapboxgl-popup {
+    background-color: #ffffff25;
+    color: Black; /* Set the desired text color here */
+    font-size: medium;
+    margin-top: -1.5%;
+    width: fit-content;
+    box-sizing: border-box;
+    border-radius: 10px;
+    flex: content;
+    
+  }
