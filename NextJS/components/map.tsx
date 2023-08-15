@@ -88,6 +88,17 @@ export default function MapComponent() {
 
       const lngLatString = `${coordinates.lng},${coordinates.lat}`;
       let addfound;
+      const name = "Not yet on Anzi";
+      const innerHtmlContent = `<div><h4>${name} </h4> </div>`;
+      const divElement = document.createElement('div');
+      const assignBtn = document.createElement('div');
+      assignBtn.innerHTML = `<button class="btn text-white bg-brown-600 hover:bg-brown-700 w-full h-5 rounded-lg">Add it</button>`;
+      divElement.innerHTML = innerHtmlContent;
+      divElement.appendChild(assignBtn);
+      assignBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        window.location.href = "/request_address"
+      });
       try {
         const response = await fetch(
           "/api/address?coordinates=" + lngLatString,
@@ -104,8 +115,7 @@ export default function MapComponent() {
 
           addfound = data[0]["name"];
         } else {
-          console.error("Request failed with status:", response.status);
-          addfound = "Not yet on Anzi" 
+          addfound = name;
         }
       } catch (error) {
         console.error(error);
@@ -118,10 +128,16 @@ export default function MapComponent() {
       // Update the searchMarkerRef with the new marker
       searchMarkerRef.current = searchMarker;
 
-      if (addfound) {
+      if (addfound !== "Not yet on Anzi") {
         new mapboxgl.Popup()
           .setLngLat(e.lngLat)
-          .setHTML(addfound)
+          .setHTML(addfound) 
+          .addTo(map);
+      }
+      else {
+        new mapboxgl.Popup()
+          .setLngLat(e.lngLat)
+          .setDOMContent(divElement) 
           .addTo(map);
       }
     });
