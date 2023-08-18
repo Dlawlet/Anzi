@@ -26,10 +26,20 @@ const addressSchema = new Schema({
     required: true,
     default: 0,
   },
+  Street_type: {
+    type: String,
+    required: true,
+    default: "Undefined",
+  },
   street: {
     type: String,
     required: true,
     default: "Unnamed",
+  },
+  Street_number: {
+    type: Number,
+    required: true,
+    default: 0,
   },
   city: {
     type: String,
