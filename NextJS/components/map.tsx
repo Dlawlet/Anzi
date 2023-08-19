@@ -175,7 +175,7 @@ export default function MapComponent({ widtho, heighto, py, page}: any) {
     return () => {
       map.remove();
     };}
-  }, []);
+  }, [page]);
 
   return (
     <section>

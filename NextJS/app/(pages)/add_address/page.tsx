@@ -101,25 +101,25 @@ return (
             </div>
             <div className="flex flex-wrap -mx-3 mb-4 mt-10 md:mt-5">
                 <div className="w-full px-3">
-                <label className="block text-gray-300 text-sm font-medium mb-1" >Street's number </label>
-                <h4 className=" text-sm text-gray-500 h-5 font-small"> ⓘ If you don't know the number of the Street, leave the field empty. We will take good care of it. </h4>
+                <label className="block text-gray-300 text-sm font-medium mb-1" >Street&apos;s number </label>
+                <h4 className=" text-sm text-gray-500 h-5 font-small"> ⓘ If you don&apos;t know the number of the Street, leave the field empty. We will take good care of it. </h4>
                 <input id="streetNumber"  type='number' min="1" className="form-input w-full text-gray-300 mt-10 md:mt-5" placeholder="If available, enter the street number."  />
                 </div>
             </div>
             <div className="flex flex-wrap -mx-3 mb-4 mt-10 md:mt-5">
                 <div className="w-full px-3">
-                <label className="block text-gray-300 text-sm font-medium mb-1" >Street's name </label>
-                <h4 className=" text-sm text-gray-500 h-5 font-small mb-4 md:mb-2"> ⓘ If you don't know the name of the Street, leave the field empty. </h4>
+                <label className="block text-gray-300 text-sm font-medium mb-1" >Street&apos;s name </label>
+                <h4 className=" text-sm text-gray-500 h-5 font-small mb-4 md:mb-2"> ⓘ If you don&apos;t know the name of the Street, leave the field empty. </h4>
                 <h4 className=" text-sm text-gray-500 h-5 font-small"> 
-                ⓘ If the Street doesn't have a name yet, you can <span className="text-brown-500">propose one</span>. Choose WISELY   </h4> 
+                ⓘ If the Street doesn&apos;t have a name yet, you can <span className="text-brown-500">propose one</span>. Choose WISELY   </h4> 
 
-                <input id="streetName"  type='text' className="form-input w-full text-gray-300 mt-10 md:mt-5" placeholder=" Tell us the name of the street or propose a name if it's unnamed."  />
+                <input id="streetName"  type='text' className="form-input w-full text-gray-300 mt-10 md:mt-5" placeholder=" Tell us the name of the street or propose a name if it&apos;s unnamed."  />
                 </div>
             </div>
             <div className="flex flex-wrap -mx-3 mb-4 mt-10 md:mt-5">
                 <div className="w-full px-3">
-                <label className="block text-gray-300 text-sm font-medium mb-1" >House's number </label>
-                <h4 className=" text-sm text-gray-500 h-5 font-small"> ⓘ If you don't know the number of the house, leave the field empty. But make sure to place a marker on the localization </h4>
+                <label className="block text-gray-300 text-sm font-medium mb-1" >House&apos;s number </label>
+                <h4 className=" text-sm text-gray-500 h-5 font-small"> ⓘ If you don&apos;t know the number of the house, leave the field empty. But make sure to place a marker on the localization </h4>
                 <input id="houseNumber" type='number' min="1" className="form-input w-full text-gray-300 mt-10 md:mt-5" placeholder=" Provide the house number as given by the municipality."  />
                 </div>
             </div>
@@ -127,7 +127,7 @@ return (
                 <div className="w-full px-3">
                 <label className="block text-gray-300 text-sm font-medium mb-1" >Contact</label>
                 <h4 className=" text-sm text-gray-500 h-5 font-small mb-4 md:mb-2"> ⓘ Provide your email or your phone number if you want to be contacted as soon as the address is online </h4>
-                <input id="contact" type="text" className="form-input w-full text-gray-300 mt-10 md:mt-5" placeholder=" If you'd like updates, give us your email or phone number. "  /> 
+                <input id="contact" type="text" className="form-input w-full text-gray-300 mt-10 md:mt-5" placeholder=" If you had like updates, give us your email or phone number. "  /> 
                 </div>
             </div>
             <h4 className=" text-gray-500 h-5 font-small mb-2"> ⚠ Remember, fields with <span className="text-red-600">*</span> are required</h4>
