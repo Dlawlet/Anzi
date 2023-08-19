@@ -6,7 +6,7 @@ const MapboxGeocoder = require("mapbox-gl-geocoder");
 import "../app/css/MapComponent.css";
 import { NextRequest, NextResponse } from "next/server";
 
-export default function MapComponent() {
+export default function MapComponent({ widtho, heighto, py}: any) {
   req: NextRequest; res: NextResponse ;
   const mapContainer = useRef(null);
   const markerRef = useRef<mapboxgl.Marker | null>(null);
@@ -149,8 +149,8 @@ export default function MapComponent() {
 
   return (
     <section>
-      <div className="py-20 ">
-        <div ref={mapContainer} style={{ width: "100%", height: "100vh" }} />
+      <div className={py.toString()}>
+        <div ref={mapContainer} style={{ width: widtho, height: heighto }} />
       </div>
     </section>
   );

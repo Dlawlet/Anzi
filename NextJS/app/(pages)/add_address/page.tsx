@@ -3,8 +3,9 @@ import Features from '@/components/features2'
 import Footer from '@/components/ui/footer'
 import Link from 'next/link'
 import React from "react";
+import MapComponent from "@/components/map"
 
-export default function RequestForm() {
+export default function AddForm() {
     // Handles the submit event on form submit.
     const handleSubmit = async (event:any ) => {
     // Stop the form from submitting and refreshing the page.
@@ -80,49 +81,65 @@ return (
             </div>
             
         <form className='max-w-3xl mx-auto' onSubmit={handleSubmit}>
-            <div className="flex flex-wrap -mx-3 mb-4">
+            <div className="flex flex-wrap -mx-3 mb-4 mt-10 md:mt-5">
                 <div className="w-full px-3">
-                <label className="block text-gray-300 text-sm font-medium mb-1" htmlFor="full-name">Full Name <span className="text-red-600">*</span></label>
-                <input id="full-name" type="text" className="form-input w-full text-gray-300" placeholder="First and last name" required />
+                <label className="block text-gray-300 text-sm font-medium " htmlFor="full-name">Country <span className="text-red-600">*</span></label>
+                <input id="full-name" type="text" className="form-input w-full text-gray-300 " placeholder="The country where the address is located " required />
+                </div>
+            </div>
+            <div className="flex flex-wrap -mx-3 mb-4 mt-10 md:mt-5">
+                <div className="w-full px-3">
+                <label className="block text-gray-300 text-sm font-medium" htmlFor="company-name">City <span className="text-red-600">*</span></label>
+                <input id="city" type="text" className="form-input w-full text-gray-300 " placeholder="The city where the address is located" required />
+                </div>
+            </div>
+            <div className="flex flex-wrap -mx-3 mb-4 mt-10 md:mt-5">
+                <div className="w-full px-3">
+                <label className="block text-gray-300 text-sm font-medium mb-1" >Street's number </label>
+                <h4 className=" text-sm text-gray-500 h-5 font-small"> ⓘ If you don't know the name of the Street, leave the field empty. We will take good care of it. </h4>
+                <input id="Street_nb"  className="form-input w-full text-gray-300 mt-10 md:mt-5" placeholder="The number of your street on map or on signalytics"  />
+                </div>
+            </div>
+            <div className="flex flex-wrap -mx-3 mb-4 mt-10 md:mt-5">
+                <div className="w-full px-3">
+                <label className="block text-gray-300 text-sm font-medium mb-1" >Street's name </label>
+                <h4 className=" text-sm text-gray-500 h-5 font-small mb-4 md:mb-2"> ⓘ If you don't know the name of the Street, leave the field empty. </h4>
+                <h4 className=" text-sm text-gray-500 h-5 font-small"> 
+                ⓘ If the Street doesn't have a name yet, you can <span className="text-brown-500">propose one</span>. Choose WISELY   </h4> 
+
+                <input id="Street_nm"  className="form-input w-full text-gray-300 mt-10 md:mt-5" placeholder="The Name of your street on map or on signalytics"  />
                 </div>
             </div>
             <div className="flex flex-wrap -mx-3 mb-4">
                 <div className="w-full px-3">
-                <label className="block text-gray-300 text-sm font-medium mb-1" htmlFor="company-name">City <span className="text-red-600">*</span></label>
-                <input id="city" type="text" className="form-input w-full text-gray-300" placeholder="The city and country where you live" required />
+                <label className="block text-gray-300 text-sm font-medium mb-1" >Contact</label>
+                <h4 className=" text-sm text-gray-500 h-5 font-small mb-4 md:mb-2"> ⓘ Provide your email or your phone number if you want to be contacted as soon as the address is online </h4>
+                <input id="contact" type="text" className="form-input w-full text-gray-300 mt-10 md:mt-5" placeholder="Your Email ou Phone Number "  /> 
                 </div>
             </div>
-            <div className="flex flex-wrap -mx-3 mb-4">
+            <h4 className=" text-gray-500 h-5 font-small mb-2"> ⚠ All the fields with <span className="text-red-600">*</span> are required</h4>
+            <div className="flex flex-wrap -mx-3 mb-4 mt-10 md:mt-5">
                 <div className="w-full px-3">
-                <label className="block text-gray-300 text-sm font-medium mb-1" >Number <span className="text-red-600">*</span></label>
-                <input id="number"  className="form-input w-full text-gray-300" placeholder="Your phone number" required />
+                <label className="block text-gray-300 text-sm font-medium mb-1" >Localization on Map</label>
+                <h4 className=" text-sm text-gray-500 h-5 font-small "> ⓘ Place a Marker on the map </h4>
+                <span >
+                <MapComponent widtho={"100%"} heighto={"30vh"} py={"py-5"} />
+                </span>
                 </div>
             </div>
-            <div className="flex flex-wrap -mx-3 mb-4">
-                <div className="w-full px-3">
-                <label className="block text-gray-300 text-sm font-medium mb-1" htmlFor="email">Email</label>
-                <input id="email" type="email" className="form-input w-full text-gray-300" placeholder="you@youremail.com"  />
-                </div>
-            </div>
-            <div className="flex flex-wrap -mx-3 mb-4">
-                <div className="w-full px-3">
-                <label className="block text-gray-300 text-sm font-medium mb-1" >Street </label>
-                <input id="street"  className="form-input w-full text-gray-300" placeholder="Will be taken in account if the street isn't yet named"  />
-                </div>
-            </div>
-            <div className="text-sm text-gray-500 text-center">
-                I agree to be contacted by Anzi about this offer as per the Anzi <Link href="#" className="underline text-gray-400 hover:text-gray-200 hover:no-underline transition duration-150 ease-in-out">Privacy Policy</Link>.
+            <div className="text-sm text-gray-500 text-center mt-10 md:mt-5 ">
+                By validating, you agree to be contacted by Anzi about this offer as per the Anzi <Link href="#" className="underline text-gray-400 hover:text-gray-200 hover:no-underline transition duration-150 ease-in-out">Privacy Policy</Link>.
             </div>
             <div className="flex flex-wrap -mx-3 mt-6">
                 <div className="w-full px-3">
                 <button className="btn text-white bg-brown-600 hover:bg-brown-700 w-full"
                 type="submit">
-                    Request your Address</button>
+                    Add this Address</button>
                 </div>
             </div>
         </form>
             <div className="text-gray-400 text-center mt-6">
-            Already having an address? find on  <Link href="/map" className="text-brown-600 hover:text-gray-200 transition duration-150 ease-in-out">Map</Link>
+            Already having an address? find it on  <Link href="/map" className="text-brown-600 hover:text-gray-200 transition duration-150 ease-in-out">Map</Link>
             </div>
         </div>
 
