@@ -9,7 +9,7 @@ import MapComponent from "@/components/map"
   
       return (
           <>
-              <MapComponent widtho={"100%"} heighto={"100vh"} py={"py-20"} />
+              <MapComponent widtho={"100%"} heighto={"100vh"} py={"py-20"} page = {"map"}/>
           </>
       )
   }

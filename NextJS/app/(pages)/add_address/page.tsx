@@ -1,5 +1,5 @@
 "use client";
-import Features from '@/components/features2'
+import Features from '@/components/features3'
 import Footer from '@/components/ui/footer'
 import Link from 'next/link'
 import React from "react";
@@ -12,12 +12,18 @@ export default function AddForm() {
     event.preventDefault()
  
     // Get data from the form.
+    const coordo = window.location;
+    const urlParams = new URLSearchParams(coordo.search);
+    const coordinates_ = urlParams.get('coordinates');
+    var array_coord = JSON.parse("[" + coordinates_ + "]");
     const data = {
-        name: event.target[0].value || "Anonymous",
+        country: event.target[0].value || "Unknown",
         city: event.target[1].value || "Unknown",
-        phone: event.target[2].value || "Unknown",
-        email: event.target[3].value || "Unknown",
-        street: event.target[4].value || "Unknown",
+        streetNumber: event.target[2].value || 0,
+        streetName: event.target[3].value || "Unknown",
+        number: event.target[4].value || 0,
+        coordinates: array_coord || [0,0],
+        description : "Address adding request by "+ event.target[5].value || "Unknown",
         date : new Date().toLocaleString(),
         addrStatus: "Received",
     }
@@ -26,7 +32,7 @@ export default function AddForm() {
     const JSONdata = JSON.stringify(data)
  
     // API endpoint where we send form data.
-    const endpoint = '/api/addrequest'
+    const endpoint = '/api/add_address'
  
     // Form the request for sending data to the server.
     const options = {
@@ -51,7 +57,7 @@ export default function AddForm() {
     // Get the response data from server as JSON.
     // If server returns the name submitted, that means the form works.
     const result = await response.json()
-    alert(`There we go Dear ${result.name}, your request has been received, we will contact you soon!`)}
+    alert(`There we go, your request has been received, we will contact you soon!`)}
   }
 
 return (
@@ -96,8 +102,8 @@ return (
             <div className="flex flex-wrap -mx-3 mb-4 mt-10 md:mt-5">
                 <div className="w-full px-3">
                 <label className="block text-gray-300 text-sm font-medium mb-1" >Street's number </label>
-                <h4 className=" text-sm text-gray-500 h-5 font-small"> ⓘ If you don't know the name of the Street, leave the field empty. We will take good care of it. </h4>
-                <input id="Street_nb"  className="form-input w-full text-gray-300 mt-10 md:mt-5" placeholder="The number of your street on map or on signalytics"  />
+                <h4 className=" text-sm text-gray-500 h-5 font-small"> ⓘ If you don't know the number of the Street, leave the field empty. We will take good care of it. </h4>
+                <input id="streetNumber"  type='number' min="1" className="form-input w-full text-gray-300 mt-10 md:mt-5" placeholder="The number of your street on map or on signalytics"  />
                 </div>
             </div>
             <div className="flex flex-wrap -mx-3 mb-4 mt-10 md:mt-5">
@@ -107,7 +113,14 @@ return (
                 <h4 className=" text-sm text-gray-500 h-5 font-small"> 
                 ⓘ If the Street doesn't have a name yet, you can <span className="text-brown-500">propose one</span>. Choose WISELY   </h4> 
 
-                <input id="Street_nm"  className="form-input w-full text-gray-300 mt-10 md:mt-5" placeholder="The Name of your street on map or on signalytics"  />
+                <input id="streetName"  type='text' className="form-input w-full text-gray-300 mt-10 md:mt-5" placeholder="The Name of your street on map or on signalytics"  />
+                </div>
+            </div>
+            <div className="flex flex-wrap -mx-3 mb-4 mt-10 md:mt-5">
+                <div className="w-full px-3">
+                <label className="block text-gray-300 text-sm font-medium mb-1" >House's number </label>
+                <h4 className=" text-sm text-gray-500 h-5 font-small"> ⓘ If you don't know the number of the house, leave the field empty. But make sure to place a marker on the localization </h4>
+                <input id="houseNumber" type='number' min="1" className="form-input w-full text-gray-300 mt-10 md:mt-5" placeholder="The number of your house given by municipality or written on gate"  />
                 </div>
             </div>
             <div className="flex flex-wrap -mx-3 mb-4">
@@ -121,9 +134,9 @@ return (
             <div className="flex flex-wrap -mx-3 mb-4 mt-10 md:mt-5">
                 <div className="w-full px-3">
                 <label className="block text-gray-300 text-sm font-medium mb-1" >Localization on Map</label>
-                <h4 className=" text-sm text-gray-500 h-5 font-small "> ⓘ Place a Marker on the map </h4>
+                <h4 className=" text-sm text-gray-500 h-5 font-small "> ⓘ Place a Marker on the location </h4>
                 <span >
-                <MapComponent widtho={"100%"} heighto={"30vh"} py={"py-5"} />
+                <MapComponent widtho={"100%"} heighto={"30vh"} py={"py-5"} page={"add"} />
                 </span>
                 </div>
             </div>

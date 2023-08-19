@@ -1,4 +1,4 @@
-import mongoose, { Schema, model, models } from "mongoose";
+import  { Schema, model, models } from "mongoose";
 
 const addressSchema = new Schema({
   type: {
@@ -26,17 +26,17 @@ const addressSchema = new Schema({
     required: true,
     default: 0,
   },
-  Street_type: {
+  streetType: {
     type: String,
     required: true,
     default: "Undefined",
   },
-  street: {
+  streetName: {
     type: String,
     required: true,
     default: "Unnamed",
   },
-  Street_number: {
+  streetNumber: {
     type: Number,
     required: true,
     default: 0,
@@ -65,6 +65,16 @@ const addressSchema = new Schema({
     type: String,
     required: true,
     default: "Unnamed",
+  },
+  addrStatus:
+  {
+      type: String,
+      required: true,
+      default: "Unnamed",
+  },
+  date: {
+      type: Date,
+      default: Date.now,
   },
 
 });

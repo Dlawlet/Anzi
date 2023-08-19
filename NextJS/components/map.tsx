@@ -6,7 +6,7 @@ const MapboxGeocoder = require("mapbox-gl-geocoder");
 import "../app/css/MapComponent.css";
 import { NextRequest, NextResponse } from "next/server";
 
-export default function MapComponent({ widtho, heighto, py}: any) {
+export default function MapComponent({ widtho, heighto, py, page}: any) {
   req: NextRequest; res: NextResponse ;
   const mapContainer = useRef(null);
   const markerRef = useRef<mapboxgl.Marker | null>(null);
@@ -17,6 +17,9 @@ export default function MapComponent({ widtho, heighto, py}: any) {
     localStorage.setItem("suggestion", JSON.stringify([]));
     mapboxgl.accessToken = process.env.NEXT_PUBLIC_MAPBOX_TOKEN || "";
     if (mapContainer.current !== null) {
+    const coordo = window.location;
+    const urlParams = new URLSearchParams(coordo.search);
+    const coordinates_ = urlParams.get('coordinates');
     const map = new mapboxgl.Map({
       container: mapContainer.current,
       style: "mapbox://styles/mapbox/streets-v12",
@@ -38,7 +41,31 @@ export default function MapComponent({ widtho, heighto, py}: any) {
     map.addControl(geocoder);
 
     //flying animation
-    fly(map);
+    if (page == "map") {fly(map);}
+    else if (page == "add" && coordinates_ !== null) {
+      var array_coord = JSON.parse("[" + coordinates_ + "]");
+      map.addControl(new mapboxgl.GeolocateControl({
+      positionOptions: {
+          enableHighAccuracy: true
+      },
+      trackUserLocation: true,
+      showUserHeading: true,
+      showUserLocation: true,
+    })); map.setCenter(array_coord); map.setZoom(16);
+    // Create a new marker
+    const marker = new mapboxgl.Marker().setLngLat(array_coord).addTo(map);
+    markerRef.current = marker;
+  }
+    else {
+      map.addControl(new mapboxgl.GeolocateControl({
+      positionOptions: {
+          enableHighAccuracy: true
+      },
+      trackUserLocation: true,
+      showUserHeading: true,
+      showUserLocation: true,
+    })); map.setCenter([11.5167, 3.8667]); map.setZoom(11);
+    }
 
     const geocoderInput = geocoder._inputEl;
     geocoderInput.addEventListener("input", (e:any) => {
@@ -97,8 +124,10 @@ export default function MapComponent({ widtho, heighto, py}: any) {
       divElement.appendChild(assignBtn);
       assignBtn.addEventListener('click', (e) => {
         e.preventDefault();
-        window.location.href = "/request_address"
+        window.location.href = "/add_address?coordinates=" + lngLatString;
       });
+      if (page == "add") {
+        window.history.pushState({}, "", "/add_address?coordinates=" + lngLatString);}
       try {
         const response = await fetch(
           "/api/address?coordinates=" + lngLatString,
@@ -135,10 +164,11 @@ export default function MapComponent({ widtho, heighto, py}: any) {
           .addTo(map);
       }
       else {
+        if (page !== "add") {
         new mapboxgl.Popup()
           .setLngLat(e.lngLat)
           .setDOMContent(divElement) 
-          .addTo(map);
+          .addTo(map);}
       }
     });
 
@@ -190,7 +220,7 @@ function fly(map: any) {
   }));
 
   // fly with default options to null island
-  map.flyTo({center: [0, 0], zoom: 9});
+  //map.flyTo({center: [0, 0], zoom: 9});
   // using flyTo options
   map.flyTo({
       center: [11.5167, 3.8667], 
