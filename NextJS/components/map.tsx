@@ -157,7 +157,7 @@ export default function MapComponent({ widtho, heighto, py, page}: any) {
       // Update the searchMarkerRef with the new marker
       searchMarkerRef.current = searchMarker;
 
-      if (addfound !== "Not yet on Anzi") {
+      if (addfound !== "Not yet on Anzi" && addfound !== "Unnamed") {
         new mapboxgl.Popup()
           .setLngLat(e.lngLat)
           .setHTML(addfound) 
