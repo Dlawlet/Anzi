@@ -66,10 +66,10 @@ return (
         <div className="pt-32 pb-12 md:pt-40 md:pb-20">
 
         {/* Page header */}
-        <div className="max-w-3xl mx-auto text-center pb-12 md:pb-20">
+        <div className="max-w-3xl mx-auto text-center pb-6 md:pb-10">
             <h1 className="h1">Welcome to Anzi</h1>
             <h1 className="h1">Network! </h1>
-            <h1 className="h2"> be findable right away.</h1>
+            <h1 className="h2"> Be Findable right away.</h1>
         </div>
 
         {/* Form */}
@@ -90,20 +90,20 @@ return (
             <div className="flex flex-wrap -mx-3 mb-4 mt-10 md:mt-5">
                 <div className="w-full px-3">
                 <label className="block text-gray-300 text-sm font-medium " htmlFor="full-name">Country <span className="text-red-600">*</span></label>
-                <input id="full-name" type="text" className="form-input w-full text-gray-300 " placeholder="The country where the address is located " required />
+                <input id="full-name" type="text" className="form-input w-full text-gray-300 " placeholder="Let us know which country your address is in. " required />
                 </div>
             </div>
             <div className="flex flex-wrap -mx-3 mb-4 mt-10 md:mt-5">
                 <div className="w-full px-3">
                 <label className="block text-gray-300 text-sm font-medium" htmlFor="company-name">City <span className="text-red-600">*</span></label>
-                <input id="city" type="text" className="form-input w-full text-gray-300 " placeholder="The city where the address is located" required />
+                <input id="city" type="text" className="form-input w-full text-gray-300 " placeholder=" Specify the city your address is located in." required />
                 </div>
             </div>
             <div className="flex flex-wrap -mx-3 mb-4 mt-10 md:mt-5">
                 <div className="w-full px-3">
                 <label className="block text-gray-300 text-sm font-medium mb-1" >Street's number </label>
                 <h4 className=" text-sm text-gray-500 h-5 font-small"> ⓘ If you don't know the number of the Street, leave the field empty. We will take good care of it. </h4>
-                <input id="streetNumber"  type='number' min="1" className="form-input w-full text-gray-300 mt-10 md:mt-5" placeholder="The number of your street on map or on signalytics"  />
+                <input id="streetNumber"  type='number' min="1" className="form-input w-full text-gray-300 mt-10 md:mt-5" placeholder="If available, enter the street number."  />
                 </div>
             </div>
             <div className="flex flex-wrap -mx-3 mb-4 mt-10 md:mt-5">
@@ -113,24 +113,24 @@ return (
                 <h4 className=" text-sm text-gray-500 h-5 font-small"> 
                 ⓘ If the Street doesn't have a name yet, you can <span className="text-brown-500">propose one</span>. Choose WISELY   </h4> 
 
-                <input id="streetName"  type='text' className="form-input w-full text-gray-300 mt-10 md:mt-5" placeholder="The Name of your street on map or on signalytics"  />
+                <input id="streetName"  type='text' className="form-input w-full text-gray-300 mt-10 md:mt-5" placeholder=" Tell us the name of the street or propose a name if it's unnamed."  />
                 </div>
             </div>
             <div className="flex flex-wrap -mx-3 mb-4 mt-10 md:mt-5">
                 <div className="w-full px-3">
                 <label className="block text-gray-300 text-sm font-medium mb-1" >House's number </label>
                 <h4 className=" text-sm text-gray-500 h-5 font-small"> ⓘ If you don't know the number of the house, leave the field empty. But make sure to place a marker on the localization </h4>
-                <input id="houseNumber" type='number' min="1" className="form-input w-full text-gray-300 mt-10 md:mt-5" placeholder="The number of your house given by municipality or written on gate"  />
+                <input id="houseNumber" type='number' min="1" className="form-input w-full text-gray-300 mt-10 md:mt-5" placeholder=" Provide the house number as given by the municipality."  />
                 </div>
             </div>
             <div className="flex flex-wrap -mx-3 mb-4">
                 <div className="w-full px-3">
                 <label className="block text-gray-300 text-sm font-medium mb-1" >Contact</label>
                 <h4 className=" text-sm text-gray-500 h-5 font-small mb-4 md:mb-2"> ⓘ Provide your email or your phone number if you want to be contacted as soon as the address is online </h4>
-                <input id="contact" type="text" className="form-input w-full text-gray-300 mt-10 md:mt-5" placeholder="Your Email ou Phone Number "  /> 
+                <input id="contact" type="text" className="form-input w-full text-gray-300 mt-10 md:mt-5" placeholder=" If you'd like updates, give us your email or phone number. "  /> 
                 </div>
             </div>
-            <h4 className=" text-gray-500 h-5 font-small mb-2"> ⚠ All the fields with <span className="text-red-600">*</span> are required</h4>
+            <h4 className=" text-gray-500 h-5 font-small mb-2"> ⚠ Remember, fields with <span className="text-red-600">*</span> are required</h4>
             <div className="flex flex-wrap -mx-3 mb-4 mt-10 md:mt-5">
                 <div className="w-full px-3">
                 <label className="block text-gray-300 text-sm font-medium mb-1" >Localization on Map</label>
