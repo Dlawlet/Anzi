@@ -90,7 +90,12 @@ export const getAddFromName = async (req, res, name) => {
         //console.log("No Adddress found with that id");
         return NextResponse.json({ error: 'No Address found with that id' }, { status: 404 })
     }
-    ////console.log('address found')
+    for (var i = 0; i < address.length; i++) {
+        if (address[i]["name"]=== "Unnamed") {
+            address.splice(i, 1); 
+            i--;
+        }
+    }
     return NextResponse.json(address, { status: 200 });
 
 

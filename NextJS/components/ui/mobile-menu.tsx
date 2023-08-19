@@ -65,6 +65,9 @@ export default function MobileMenu() {
             <Link href="/map" className="flex font-medium w-full text-brown-600 hover:text-gray-200 py-2 justify-center" onClick={() => setMobileNavOpen(false)}>
               Map
             </Link>
+            <Link href="/add_address" className="flex font-medium w-full text-brown-600 hover:text-gray-200 py-2 justify-center" onClick={() => setMobileNavOpen(false)}>
+              Add Address
+            </Link>
           </li>
           {/* <li>
             <Link href="/signin" className="flex font-medium w-full text-brown-600 hover:text-gray-200 py-2 justify-center" onClick={() => setMobileNavOpen(false)}>

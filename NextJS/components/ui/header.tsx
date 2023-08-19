@@ -28,6 +28,13 @@ export default function Header() {
                   Map
                 </Link>
               </li>
+              <li>
+                <Link href="/add_address"
+                  className="font-medium text-brown-600 hover:text-gray-200 px-4 py-3 flex items-center transition duration-150 ease-in-out"
+                >
+                  Add Address 
+                </Link>
+              </li>
               {/*<li>
                 <Link
                   href="/signin"

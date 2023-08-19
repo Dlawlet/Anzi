@@ -59,10 +59,10 @@ return (
         <div className="pt-32 pb-12 md:pt-40 md:pb-20">
 
         {/* Page header */}
-        <div className="max-w-3xl mx-auto text-center pb-12 md:pb-20">
+        <div className="max-w-3xl mx-auto text-center pb-3 md:pb-5">
             <h1 className="h1">Welcome to Anzi</h1>
             <h1 className="h1">Network! </h1>
-            <h1 className="h2"> be findable right away.</h1>
+            <h1 className="h2"> Be Confident in Your Address </h1>
         </div>
 
         {/* Form */}
@@ -83,46 +83,46 @@ return (
             <div className="flex flex-wrap -mx-3 mb-4">
                 <div className="w-full px-3">
                 <label className="block text-gray-300 text-sm font-medium mb-1" htmlFor="full-name">Full Name <span className="text-red-600">*</span></label>
-                <input id="full-name" type="text" className="form-input w-full text-gray-300" placeholder="First and last name" required />
+                <input id="full-name" type="text" className="form-input w-full text-gray-300" placeholder=" Enter your first and last name." required />
                 </div>
             </div>
             <div className="flex flex-wrap -mx-3 mb-4">
                 <div className="w-full px-3">
                 <label className="block text-gray-300 text-sm font-medium mb-1" htmlFor="company-name">City <span className="text-red-600">*</span></label>
-                <input id="city" type="text" className="form-input w-full text-gray-300" placeholder="The city and country where you live" required />
+                <input id="city" type="text" className="form-input w-full text-gray-300" placeholder="Specify your city and country." required />
                 </div>
             </div>
             <div className="flex flex-wrap -mx-3 mb-4">
                 <div className="w-full px-3">
                 <label className="block text-gray-300 text-sm font-medium mb-1" >Number <span className="text-red-600">*</span></label>
-                <input id="number"  className="form-input w-full text-gray-300" placeholder="Your phone number" required />
+                <input id="number"  className="form-input w-full text-gray-300" placeholder="Provide your phone number." required />
                 </div>
             </div>
             <div className="flex flex-wrap -mx-3 mb-4">
                 <div className="w-full px-3">
                 <label className="block text-gray-300 text-sm font-medium mb-1" htmlFor="email">Email</label>
-                <input id="email" type="email" className="form-input w-full text-gray-300" placeholder="you@youremail.com"  />
+                <input id="email" type="email" className="form-input w-full text-gray-300" placeholder="Add your email [you@youremail.com] for communication purposes."  />
                 </div>
             </div>
             <div className="flex flex-wrap -mx-3 mb-4">
                 <div className="w-full px-3">
-                <label className="block text-gray-300 text-sm font-medium mb-1" >Street </label>
-                <input id="street"  className="form-input w-full text-gray-300" placeholder="Will be taken in account if the street isn't yet named"  />
+                <label className="block text-gray-300 text-sm font-medium mb-1" >Address </label>
+                <input id="street"  className="form-input w-full text-gray-300" placeholder="Provide your actual Address on our Map"  />
                 </div>
             </div>
             <div className="text-sm text-gray-500 text-center">
-                I agree to be contacted by Anzi about this offer as per the Anzi <Link href="#" className="underline text-gray-400 hover:text-gray-200 hover:no-underline transition duration-150 ease-in-out">Privacy Policy</Link>.
+            By validating, you agree to be contacted by  Anzi about this offer as per the Anzi <Link href="#" className="underline text-gray-400 hover:text-gray-200 hover:no-underline transition duration-150 ease-in-out">Privacy Policy</Link>.
             </div>
             <div className="flex flex-wrap -mx-3 mt-6">
                 <div className="w-full px-3">
                 <button className="btn text-white bg-brown-600 hover:bg-brown-700 w-full"
                 type="submit">
-                    Request your Address</button>
+                    Request your Address Verification </button>
                 </div>
             </div>
         </form>
             <div className="text-gray-400 text-center mt-6">
-            Already having an address? find on  <Link href="/map" className="text-brown-600 hover:text-gray-200 transition duration-150 ease-in-out">Map</Link>
+            Already having an address? find it on  <Link href="/map" className="text-brown-600 hover:text-gray-200 transition duration-150 ease-in-out">Map</Link>
             </div>
         </div>
 
