@@ -164,7 +164,7 @@ export default function MapComponent({ widtho, heighto, py, page}: any) {
           .addTo(map);
       }
       else {
-        if (page !== "add") {
+        if (page !== "add" && 8<coordinates.lng && coordinates.lng<17 && 1<coordinates.lat && coordinates.lat<14 ) {
         new mapboxgl.Popup()
           .setLngLat(e.lngLat)
           .setDOMContent(divElement) 
