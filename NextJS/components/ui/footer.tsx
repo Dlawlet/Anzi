@@ -42,7 +42,8 @@ export default function Footer() {
         {/* 3rd block */}
         <div className="flex flex-col items-center">
           {/* Logo */}
-          <Link href="https://gombocmr.odoo.com/en_GB" className="inline-block" aria-label="Cruip">
+          {/* <Link href="https://gombocmr.odoo.com/en_GB" className="inline-block" aria-label="Cruip">*/}
+          <Link href="/" className="inline-block" aria-label="Cruip">
             <Image src={logogmb} width={160} height={160} alt="logo" />
           </Link>
           <div className="text-gray-400 mt-2">Gombo</div>
