@@ -6,6 +6,17 @@ This document owns the street data model, the numbering algorithm, the naming ru
 
 Evidence: a scratch simulation (outside the repo, results in 1.3) of 4 numbering schemes on straight, curved and S-shaped streets, 30 % and 80 % of houses registered in random order, GPS error 3 to 30 m.
 
+## Owner answers to section 10 (2026-10-11): these override the text below where they differ
+
+1. **Numbering:** the first house on a street is not automatically n°1. Numbers follow the reading order of the houses along the street line (increasing along the line). Automate this wherever a line exists. Where no line exists, the admin (owner) traces the line when a user requests the street at creation. No guessing from GPS.
+2. **Privacy (Google-style):** typing a street and number shows the location and offers directions, never anything about the person living there. Homes show only street, number, quarter/city and landmark; the home's name and owner details are never shown to others. Only businesses (public places) show their name and information. Link-only/private homes still return only the spot, identical for unknown addresses (the anti-enumeration rule in the section 6 proposal stands).
+3. **OpenStreetMap:** keep using OSM (free, already the base of the map data). Bulk import of OSM street lines is deferred; admin traces lines first. Focus on shipping the app quickly.
+4. **Street names:** unique within 2 km, stored in the language the user wrote, never translated. Type words (rue, avenue, street...) are translated in the UI; the name itself is not.
+5. **Naming authority:** the admin fixes street names (final judge, moderation only). Bonus rule: when a user's street reaches at least 5 houses, the name that user proposed is accepted automatically; otherwise the admin decides. The "3 confirming neighbours" rule is dropped.
+6. **ADMIN_TOKEN:** approved as a new server-only secret.
+
+Stability note: reading-order numbering conflicts with "a number never changes" when a house is inserted between two existing ones. Keep the section 1 rule (a busy spot takes a letter, 100A; numbers are never reused) unless the owner decides otherwise.
+
 ---
 
 ## 1. Numbering algorithm
