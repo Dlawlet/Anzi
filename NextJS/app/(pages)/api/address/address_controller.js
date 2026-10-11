@@ -1,6 +1,21 @@
 import Address from "../../../../models/addressModel.js";
 import { NextResponse } from "next/server";
+import { cleanSearch, escapeRegex, isValidId, parseCoordinates } from "../../../../utils/validate.js";
 
+const serverError = (error) => {
+    console.error(error);
+    return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+};
+const badRequest = (message) => NextResponse.json({ error: message }, { status: 400 });
+
+async function readBody(req) {
+    try {
+        const body = await req.json();
+        return body && typeof body === "object" && !Array.isArray(body) ? body : null;
+    } catch {
+        return null;
+    }
+}
 
 export const getAddresses = async (req, res
     ) => {
@@ -29,12 +44,12 @@ export const getAddresses = async (req, res
 
 export const getAddFromId = async (req, res) => {
     const _id = req.nextUrl.searchParams.get('id');
+    if (!isValidId(_id)) return badRequest('Invalid id');
     let address;
     try {
         address = await Address.findById(_id);
     } catch (error) {
-        //console.log(error);
-        return NextResponse.json({ error: error }, { status: 500 })
+        return serverError(error);
     }
 
     if (!address) {
@@ -46,9 +61,10 @@ export const getAddFromId = async (req, res) => {
 };
 
 export const getAddFromCoord = async (req, res, coordo) => {
+    const array_coord = parseCoordinates(coordo);
+    if (!array_coord) return badRequest('Invalid coordinates');
     Address.createIndexes({ coordinates: "2dsphere" });
     let address;
-    var array_coord = JSON.parse("[" + coordo + "]");
     try {
         address = await Address.aggregate([
             {
@@ -62,8 +78,7 @@ export const getAddFromCoord = async (req, res, coordo) => {
             }
          ])
     } catch (error) {
-        //console.log(error);
-        return NextResponse.json({ error: error }, { status: 510 })
+        return serverError(error);
     }
     //console.log(address)
     if (address.length === 0 ) {
@@ -76,14 +91,14 @@ export const getAddFromCoord = async (req, res, coordo) => {
 
 export const getAddFromName = async (req, res, name) => {
     // partial search on field name 
+    const search = cleanSearch(name);
+    if (!search) return badRequest('Invalid search');
     let address;
     try {
         Address.createIndexes({name: "text"})
-        address = await Address.find({name: {$regex: name, $options: 'i'}}); // case insensitive search 
-        //console.log(address)
+        address = await Address.find({name: {$regex: escapeRegex(search), $options: 'i'}}).limit(20); // case insensitive, literal match
     } catch (error) {
-        //console.log(error);
-        return NextResponse.json({ error: error }, { status: 500 })
+        return serverError(error);
     }
 
     if (address.length === 0 ) {
@@ -102,7 +117,8 @@ export const getAddFromName = async (req, res, name) => {
 };
 
 export const addAddress = async (req, res) => {
-    const body = await req.json();
+    const body = await readBody(req);
+    if (!body) return badRequest('Invalid JSON body');
     const { 
         type,
         coordinates,
@@ -129,21 +145,18 @@ export const addAddress = async (req, res) => {
 
         //console.log("Address added");
     } catch (error) {
-        //console.log(error);
-        return NextResponse.json({ error: error }, { status: 500 })
+        if (error?.name === 'ValidationError') return badRequest('Invalid address data');
+        return serverError(error);
     }
 
-    if (!address) {
-        //console.log("Internal Server Error");
-        return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 })
-    }
-    
     return NextResponse.json(address, { status: 201});
 };
 
 export const updateAddress = async (req, res) => {
-    const body = await req.json();
+    const body = await readBody(req);
+    if (!body) return badRequest('Invalid JSON body');
     const _id = req.nextUrl.searchParams.get('id');
+    if (!isValidId(_id)) return badRequest('Invalid id');
     const { 
         type,
         coordinates,
@@ -163,7 +176,8 @@ export const updateAddress = async (req, res) => {
     let address;
 
     try {
-        address = await Address.findByIdAndUpdate(_id);
+        address = await Address.findById(_id);
+        if (!address) return NextResponse.json({ error: 'No Address found with that id' }, { status: 404 });
         address.type = type || address.type;
         address.coordinates = coordinates || address.coordinates;
         address.name = name || address.name;
@@ -180,13 +194,8 @@ export const updateAddress = async (req, res) => {
 
         //console.log("Address updated");
     } catch (error) {
-        //console.log(error);
-        return NextResponse.json({ error: error }, { status: 500 })
-    }
-
-    if (!address) {
-        //console.log("Internal Server Error");
-        return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 })
+        if (error?.name === 'ValidationError') return badRequest('Invalid address data');
+        return serverError(error);
     }
 
     return NextResponse.json(address, { status: 200 });
@@ -194,17 +203,16 @@ export const updateAddress = async (req, res) => {
 
 export const deleteAddress = async (req, res) => {
     const _id = req.nextUrl.searchParams.get('id');
+    if (!isValidId(_id)) return badRequest('Invalid id');
     let address;
     try {
         address = await Address.findByIdAndDelete(_id);
     } catch (error) {
-        //console.log(error);
-        return NextResponse.json({ error: error }, { status: 500 })
+        return serverError(error);
     }
 
     if (!address) {
-        //console.log("Internal Server Error");
-        return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 })
+        return NextResponse.json({ error: 'No Address found with that id' }, { status: 404 });
     }
 
     return NextResponse.json({ message: 'Address deleted successfully" '}, { status: 200 });    
