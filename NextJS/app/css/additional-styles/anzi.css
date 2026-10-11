@@ -1,0 +1,120 @@
+/* Anzi component classes (docs/design-2026-10.md sections 2.2-2.7). Tokens live in tailwind.config.js. */
+@layer components {
+  .btn {
+    @apply flex min-h-[58px] w-full items-center justify-center gap-3 rounded-2xl px-[18px] text-center text-[17px] font-bold tracking-tight focus-visible:outline focus-visible:outline-[3px] focus-visible:outline-offset-2 focus-visible:outline-clay disabled:opacity-60;
+  }
+  /* Charcoal text on orange (7.37:1). White on orange is never used. */
+  .btn-primary {
+    @apply bg-sun text-night-900;
+    box-shadow: inset 0 -3px 0 #a95700, 0 12px 22px -12px rgba(169, 87, 0, 0.85);
+  }
+  .btn-dark {
+    @apply bg-night-900 text-white;
+  }
+  .btn-outline {
+    @apply bg-white text-night-900;
+    box-shadow: inset 0 0 0 2px #151719;
+  }
+  .btn-icon {
+    @apply grid h-9 w-9 place-items-center rounded-full bg-night-900 text-sun;
+    margin-left: -6px;
+  }
+
+  .field-box {
+    @apply flex min-h-[60px] items-center gap-2.5 rounded-[14px] border-2 border-field bg-white pl-3.5 pr-1.5 text-[17px] text-night-900 focus-within:border-clay;
+  }
+  .field-box:focus-within {
+    box-shadow: 0 0 0 4px #ffe2bf;
+  }
+
+  .map-chip {
+    @apply absolute z-[2] flex h-9 items-center gap-2 rounded-full bg-white px-3 text-sm font-bold text-night-900 shadow-warm1;
+  }
+  .map-btn {
+    @apply absolute z-[2] flex h-12 items-center gap-2 rounded-full bg-night-900 px-4 text-[15px] font-bold text-white focus-visible:outline focus-visible:outline-[3px] focus-visible:outline-offset-2 focus-visible:outline-sun;
+    box-shadow: 0 8px 18px -6px rgba(21, 23, 25, 0.6);
+  }
+
+  /* Placeholder behind the static map: shown while the image loads, offline, or without a map token. */
+  .map-motif {
+    background-color: #f3ece0;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180' viewBox='0 0 180 180'%3E%3Cg fill='none' stroke='rgba(66,33,11,.07)' stroke-width='2'%3E%3Cpath d='M0 40Q60 30 90 60T180 40'/%3E%3Cpath d='M40 0Q50 60 30 110T40 180'/%3E%3Cpath d='M0 130Q90 150 180 130'/%3E%3Cpath d='M120 0Q110 50 140 90T120 180'/%3E%3C/g%3E%3C/svg%3E");
+  }
+
+  /* House-number tag along a street line (kind: anon / public / mine). */
+  .ntag {
+    @apply absolute z-[1] flex h-6 min-w-[30px] items-center justify-center gap-[3px] rounded-lg bg-sun-50 px-1.5 text-[13px] font-extrabold leading-none text-earth;
+    transform: translate(-50%, -50%);
+    font-feature-settings: 'tnum';
+    box-shadow: 0 0 0 1.5px #42210b, 0 3px 6px -2px rgba(66, 33, 11, 0.35);
+  }
+  .ntag-public {
+    @apply bg-sun text-night-900;
+  }
+  .ntag-mine {
+    @apply bg-earth text-sun-200;
+    box-shadow: 0 0 0 2px #ff8506, 0 3px 6px -2px rgba(66, 33, 11, 0.35);
+  }
+  /* Street name chip. */
+  .schip {
+    @apply absolute z-[2] flex h-[26px] items-center gap-[5px] whitespace-nowrap rounded-full bg-white px-2.5 text-[13px] font-extrabold text-earth;
+    transform: translate(-50%, -50%) rotate(-9deg);
+    box-shadow: 0 0 0 1.5px #42210b, 0 1px 2px rgba(66, 33, 11, 0.08), 0 4px 12px -2px rgba(66, 33, 11, 0.12);
+  }
+  .schip-prov {
+    box-shadow: 0 1px 2px rgba(66, 33, 11, 0.08), 0 4px 12px -2px rgba(66, 33, 11, 0.12);
+    outline: 1.5px dashed #a95700;
+    outline-offset: -1.5px;
+  }
+
+  /* House number on an orange plate. */
+  .plate-no {
+    @apply inline-grid h-[38px] min-w-[46px] place-items-center rounded-[10px] bg-sun px-[9px] font-extrabold text-night-900;
+    box-shadow: inset 0 -3px 0 #a95700;
+    font-feature-settings: 'tnum';
+  }
+
+  /* Dark brand band: charcoal with the faint street-lines motif and an orange glow. */
+  .hero-band {
+    @apply relative overflow-hidden bg-night-900 px-4 pb-24 pt-5 text-white;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180' viewBox='0 0 180 180'%3E%3Cg fill='none' stroke='rgba(255,255,255,.06)' stroke-width='1.5'%3E%3Cpath d='M0 40Q60 30 90 60T180 40'/%3E%3Cpath d='M40 0Q50 60 30 110T40 180'/%3E%3Cpath d='M0 130Q90 150 180 130'/%3E%3Cpath d='M120 0Q110 50 140 90T120 180'/%3E%3C/g%3E%3C/svg%3E");
+  }
+  .hero-band::before {
+    content: '';
+    position: absolute;
+    right: -110px;
+    top: -120px;
+    width: 320px;
+    height: 320px;
+    border-radius: 50%;
+    background: radial-gradient(closest-side, rgba(255, 133, 6, 0.4), rgba(255, 133, 6, 0));
+  }
+  .hero-band > * {
+    position: relative;
+  }
+  /* Hand-drawn orange underline under the highlighted word. */
+  .hl {
+    @apply pb-[5px] text-sun;
+    background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 120 10' preserveAspectRatio='none'%3E%3Cpath d='M2 7C30 2 70 1 118 5' fill='none' stroke='%23FF8506' stroke-width='3.2' stroke-linecap='round'/%3E%3C/svg%3E")
+      left bottom / 100% 9px no-repeat;
+  }
+}
+
+/* "You are here" pulse; off under reduced motion. */
+@keyframes anzi-pulse {
+  0% { transform: scale(0.35); opacity: 1; }
+  100% { transform: scale(1.5); opacity: 0; }
+}
+.you-dot::after {
+  content: '';
+  position: absolute;
+  inset: -16px;
+  border-radius: 50%;
+  background: rgba(26, 115, 232, 0.2);
+  animation: anzi-pulse 2.4s ease-out infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .you-dot::after {
+    animation: none;
+  }
+}

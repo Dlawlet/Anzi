@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import { getI18n } from '@/i18n/server'
 import MineFlow from '@/components/app/mine-flow'
+import AppBar from '@/components/app/app-bar'
 
 export async function generateMetadata(): Promise<Metadata> {
   const { t } = await getI18n()
@@ -8,5 +9,10 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export default function MinePage() {
-  return <MineFlow />
+  return (
+    <>
+      <AppBar />
+      <div className="px-4 pt-6"><MineFlow /></div>
+    </>
+  )
 }

@@ -1,59 +1,40 @@
-import Link from 'next/link'
+import { Suspense } from 'react'
 import type { Metadata } from 'next'
 import { getI18n } from '@/i18n/server'
+import AppBar from '@/components/app/app-bar'
+import HeroBand from '@/components/app/hero-band'
+import HomeMap from '@/components/app/home-map'
+import MapPreview from '@/components/app/map-preview'
+import AddressSearchBox from '@/components/app/address-search-box'
 import HomeMine from '@/components/app/home-mine'
-import { PlusIcon, SearchIcon } from '@/components/app/icons'
-import { inputClass, primaryButton } from '@/components/app/ui-classes'
+import HowItWorks from '@/components/app/how-it-works'
+import Credits from '@/components/app/credits'
 
 export async function generateMetadata(): Promise<Metadata> {
   const { t } = await getI18n()
   return { title: `${t.brand} - ${t.home.tagline}`, description: t.meta.description }
 }
 
-// No client JS here except the list of this phone's addresses: the search box is a plain GET form.
+const PLACEHOLDER_VIEW = { center: [11.5174, 3.8667] as [number, number], zoom: 14, width: 360, height: 210 }
+
+// Home = the "Trouver" tab (docs/design-2026-10.md section 4.1). The dark hero and the search paint at once;
+// the map card streams in after its data (and shows the street-lines motif while it waits). No map library
+// is loaded here: Mapbox GL arrives only after a tap on "Agrandir".
 export default async function Home() {
   const { t } = await getI18n()
 
   return (
-    <div>
-      <h1 className="text-3xl font-bold leading-tight">{t.home.tagline}</h1>
-
-      <div className="mt-6">
-        <Link href="/create" className={primaryButton}>
-          <PlusIcon className="h-6 w-6" />
-          {t.create.title}
-        </Link>
-        <p className="mt-2 text-base text-gray-700">{t.home.createHint}</p>
-      </div>
-
-      <section aria-labelledby="home-find" className="mt-8">
-        <h2 id="home-find" className="text-xl font-bold">{t.home.findTitle}</h2>
-        <form action="/find" method="get" className="mt-3 space-y-3">
-          <label htmlFor="q" className="block text-base font-semibold text-gray-900">{t.find.label}</label>
-          <input
-            id="q"
-            name="q"
-            type="text"
-            required
-            maxLength={80}
-            autoComplete="off"
-            autoCapitalize="characters"
-            autoCorrect="off"
-            spellCheck={false}
-            placeholder={t.find.hint}
-            className={inputClass(false)}
-          />
-          <button
-            type="submit"
-            className="flex min-h-12 w-full items-center justify-center gap-2 rounded-lg border-2 border-green-700 bg-white px-4 py-3 text-base font-semibold text-green-800 hover:bg-green-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-green-700"
-          >
-            <SearchIcon className="h-6 w-6" />
-            {t.find.button}
-          </button>
-        </form>
+    <>
+      <AppBar variant="dark" />
+      <HeroBand />
+      <section aria-label={t.home.searchLabel} className="relative z-[1] -mt-[74px] mx-4 overflow-hidden rounded-3xl bg-white shadow-warm2">
+        <Suspense fallback={<MapPreview view={PLACEHOLDER_VIEW} imageUrl={null} streets={[]} tags={[]} chip="Yaoundé" label="Yaoundé" />}>
+          <HomeMap />
+        </Suspense>
+        <AddressSearchBox />
       </section>
-
-      <HomeMine />
-    </div>
+      <HomeMine fallback={<HowItWorks />} />
+      <Credits />
+    </>
   )
 }
