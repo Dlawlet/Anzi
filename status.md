@@ -14,7 +14,7 @@ Anzi: Next.js app where users view a map of addresses (Mapbox), and submit new a
 
 ## Next steps
 1. Owner: rotate the Atlas password and set `MONGODB_URI` in Vercel (the old `NEXT_PUBLIC_MONGODB_URI` is no longer read); restrict the Mapbox token by URL; decide on deleting `yarn.lock` (Vercel may pick it over `package-lock.json`).
-2. Rest of Phase 0: security headers + CSP in `next.config.js`, map decision spike. Then Phase 1 (`Place` model, device-token identity, rate limits) which also closes the open-write issue (no authn on PUT/DELETE `/api/address`).
+2. Rest of Phase 0: map decision spike. CSP and security headers are in `next.config.js` but untested in a real browser with a Mapbox token (check the map, geolocation and the hero Mega iframe load; tighten `script-src` with nonces later). Then Phase 1 (`Place` model, device-token identity, rate limits) which also closes the open-write issue (no authn on PUT/DELETE `/api/address`).
 3. `npm audit`: 9 left, all build-time (Tailwind 3 and eslint-config-next glob chain); fix = Tailwind 4 / newer eslint-config-next, not done.
 
 ## Decisions (why, not what)
