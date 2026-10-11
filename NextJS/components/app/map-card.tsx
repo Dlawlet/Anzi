@@ -6,7 +6,7 @@ import { createPortal } from 'react-dom'
 import { useI18n } from '@/i18n/provider'
 import { toPercent, type LngLat, type MapView } from '@/utils/staticMap'
 import type { HomeStreet, HomeTag } from '@/utils/homeMap'
-import { ExpandIcon, ShrinkIcon } from './icons'
+import { ExpandIcon, SearchIcon, ShrinkIcon } from './icons'
 
 function MapLoading() {
   const { t } = useI18n()
@@ -122,10 +122,30 @@ export default function MapCard({
             <MapBoundary onFail={fail}>
               <InteractiveMap center={view.center} zoom={view.zoom} streets={streets} tags={tags} label={label} onFail={fail} />
             </MapBoundary>
-            <button ref={closeButton} type="button" onClick={toggle} className="map-btn left-3 top-[max(0.75rem,env(safe-area-inset-top))]">
-              <ShrinkIcon className="h-5 w-5" />
-              {t.home.mapClose}
-            </button>
+            <div className="absolute inset-x-3 top-[max(0.75rem,env(safe-area-inset-top))] z-[2] flex items-center gap-2">
+              <button ref={closeButton} type="button" onClick={toggle} className="map-btn !static flex-none">
+                <ShrinkIcon className="h-5 w-5" />
+                {t.home.mapClose}
+              </button>
+              {/* Like a maps app: the search stays on top of the map. It opens the result page (GET /find?q=). */}
+              <form action="/find" method="get" role="search" className="flex h-12 min-w-0 flex-1 items-center gap-1 rounded-full bg-white pl-4 pr-1.5 shadow-warm2 md:max-w-md">
+                <input
+                  name="q"
+                  type="search"
+                  required
+                  maxLength={80}
+                  autoComplete="off"
+                  autoCorrect="off"
+                  spellCheck={false}
+                  aria-label={t.home.searchLabel}
+                  placeholder={t.home.searchPlaceholder}
+                  className="min-w-0 flex-1 border-0 bg-transparent p-0 text-[17px] text-night-900 placeholder:text-muted focus:ring-0"
+                />
+                <button type="submit" aria-label={t.home.searchButton} className="grid h-10 w-10 flex-none place-items-center rounded-full bg-night-900 text-white focus-visible:outline focus-visible:outline-[3px] focus-visible:outline-offset-2 focus-visible:outline-sun">
+                  <SearchIcon className="h-5 w-5" />
+                </button>
+              </form>
+            </div>
           </div>,
           // Portal: the card is its own stacking context, which would keep the map under the bottom bar.
           document.body

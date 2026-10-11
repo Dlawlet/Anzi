@@ -1,3 +1,4 @@
+import Link from 'next/link'
 import { getI18n } from '@/i18n/server'
 import Logo from './logo'
 
@@ -12,6 +13,9 @@ export default async function Credits() {
           <br />
           {t.home.creditsNote}
         </div>
+        <Link href="/about" className="ml-auto inline-flex min-h-12 items-center px-2 text-base font-bold text-clay-700 underline focus-visible:outline focus-visible:outline-[3px] focus-visible:outline-clay">
+          {t.about.link}
+        </Link>
       </div>
     </footer>
   )

@@ -82,6 +82,24 @@
     font-feature-settings: 'tnum';
   }
 
+  /* Address plate of the success card: number, divider, street word and name on an orange plate with four screws. */
+  .plate {
+    @apply relative flex min-h-[92px] items-center gap-3.5 rounded-2xl bg-sun px-7 py-3 text-night-900;
+    box-shadow: inset 0 -5px 0 #a95700, 0 14px 24px -14px rgba(0, 0, 0, 0.7);
+  }
+  .plate-screw {
+    @apply absolute h-[7px] w-[7px] rounded-full;
+    background: radial-gradient(circle at 35% 30%, #ffe2bf, #a95700);
+  }
+  /* Selectable street card (create flow, step 3). */
+  .choice {
+    @apply flex min-h-[64px] w-full items-center gap-3 rounded-2xl border-2 border-field bg-white px-3.5 py-3 text-left;
+  }
+  .choice-on {
+    @apply border-clay bg-sun-50;
+    box-shadow: 0 0 0 3px #ffe2bf;
+  }
+
   /* Dark brand band: charcoal with the faint street-lines motif and an orange glow. */
   .hero-band {
     @apply relative overflow-hidden bg-night-900 px-4 pb-24 pt-5 text-white;
@@ -134,7 +152,15 @@
     --col: 48rem;
     --edge: max(0px, calc((100% - var(--col)) / 2));
   }
+  /* On a tall screen the dark band grows, so "Comment ça marche" and the footer sit at the bottom instead of
+     leaving an empty strip under them. */
+  .home-top {
+    display: flex;
+    flex: 1 0 auto;
+    flex-direction: column;
+  }
   .home-top > .hero-band {
+    flex: 1 0 auto;
     padding-inline: calc(var(--edge) + 1rem);
   }
   .home-top > .home-card {

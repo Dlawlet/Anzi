@@ -13,8 +13,8 @@ export default async function AppLayout({ children }: { children: React.ReactNod
 
   return (
     <I18nProvider lang={lang} t={t}>
-      <div className="min-h-screen bg-sand text-night-900">
-        <main className="w-full pb-28 md:pb-12">{children}</main>
+      <div className="flex min-h-screen flex-col bg-sand text-night-900">
+        <main className="flex w-full flex-1 flex-col pb-28 md:pb-12">{children}</main>
         <BottomNav />
         <SwRegister />
       </div>

@@ -10,7 +10,7 @@ import { CopyIcon, NavigateIcon, ShareIcon } from './icons'
 import { primaryButton, secondaryButton } from './ui-classes'
 
 // Share and "Y aller" buttons under an address card. The owner leads with sharing, a visitor with navigating.
-export default function PlaceActions({ place, t, lead }: { place: PlaceView; t: Dict; lead: 'share' | 'navigate' }) {
+export default function PlaceActions({ place, t, lead, whatsappTone }: { place: PlaceView; t: Dict; lead: 'share' | 'navigate'; whatsappTone?: 'leaf' }) {
   const [copied, setCopied] = useState(false)
   const [goOpen, setGoOpen] = useState(false)
   const closeGo = useCallback(() => setGoOpen(false), [])
@@ -32,7 +32,7 @@ export default function PlaceActions({ place, t, lead }: { place: PlaceView; t: 
   }
 
   const share = (
-    <a key="share" href={whatsappUrl(shareText)} target="_blank" rel="noopener noreferrer" className={lead === 'share' ? primaryButton : secondaryButton}>
+    <a key="share" href={whatsappUrl(shareText)} target="_blank" rel="noopener noreferrer" className={whatsappTone === 'leaf' ? 'btn bg-leaf text-white' : lead === 'share' ? primaryButton : secondaryButton}>
       <ShareIcon className="h-6 w-6" />
       {t.common.whatsapp}
     </a>

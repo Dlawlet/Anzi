@@ -89,3 +89,26 @@ export const CategoryIcon = ({ category, className }: Props & { category: string
   const Icon = CATEGORY_ICONS[category] ?? DotsIcon
   return <Icon className={className} />
 }
+
+// Street-name tile groups (create flow, "Nommez votre rue").
+export const FruitIcon = ({ className }: Props) => (
+  <svg {...base} className={className}><path d="M12 8c-2.5-2-7-.5-7 4.5C5 17 8 21 10.5 21c.7 0 1-.3 1.5-.3s.8.3 1.5.3C16 21 19 17 19 12.5 19 7.5 14.500 6 12 8Z" /><path d="M12 8c0-2 1-3.500 3-4" /></svg>
+)
+export const TreeIcon = ({ className }: Props) => (
+  <svg {...base} className={className}><path d="M12 21v-6" /><path d="M12 3c3.500 2 5.500 5 5.500 8a5.500 5.500 0 0 1-11 0c0-3 2-6 5.500-8Z" /></svg>
+)
+export const BirdIcon = ({ className }: Props) => (
+  <svg {...base} className={className}><path d="M3 15c3-.5 4.500-2 5.500-4.500C9.500 8 12 6.500 15 7l3-2.500-.500 3c1.500 1 2.500 2.500 2.500 4.500 0 4-3.500 7-8 7-3.500 0-6.500-1.500-9-4Z" /><path d="M16.500 10.500h.01" /></svg>
+)
+export const LeafIcon = ({ className }: Props) => (
+  <svg {...base} className={className}><path d="M5 19C5 9 11 4 20 4c0 9-5 15-15 15Z" /><path d="M5 19c3-5 6-7.500 9-9" /></svg>
+)
+const GROUP_ICONS: Record<string, (p: Props) => React.ReactElement> = {
+  fruit: FruitIcon,
+  tree: TreeIcon,
+  bird: BirdIcon,
+}
+export const GroupIcon = ({ group, className }: Props & { group: string }) => {
+  const Icon = GROUP_ICONS[group] ?? LeafIcon
+  return <Icon className={className} />
+}

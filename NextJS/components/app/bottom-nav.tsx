@@ -13,6 +13,9 @@ export default function BottomNav() {
   const isCreate = pathname === '/create' || pathname.startsWith('/create/')
   const isMine = pathname === '/mine' || pathname.startsWith('/mine/')
 
+  // The create flow has its own sticky action bar.
+  if (isCreate) return null
+
   const tab = (active: boolean) =>
     `flex min-h-[62px] flex-1 flex-col items-center justify-end gap-[3px] text-sm font-semibold focus-visible:outline focus-visible:outline-[3px] focus-visible:outline-offset-[-3px] focus-visible:outline-clay ${active ? 'text-clay-700' : 'text-muted'}`
   const pill = (active: boolean) => `grid h-[34px] w-[62px] place-items-center rounded-full ${active ? 'bg-sun-200' : ''}`

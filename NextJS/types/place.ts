@@ -29,3 +29,11 @@ export type PlaceView = {
   visibility: 'private' | 'link' | 'public'
   isOwner: boolean
 }
+
+// One row of GET /api/streets?near=lng,lat (streets_controller.js). `ideal` is null while the street waits for its line.
+export type NearStreet = PlaceStreet & {
+  lineStatus: 'waiting' | 'ready'
+  count: 'few' | 'some' | 'many'
+  distanceM: number
+  ideal: { number: number; parity: 'even' | 'odd'; side: string } | null
+}
