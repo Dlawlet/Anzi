@@ -20,7 +20,7 @@ export default function BottomNav() {
   return (
     <nav
       aria-label={t.nav.label}
-      className="fixed inset-x-0 bottom-0 z-20 bg-white pb-[env(safe-area-inset-bottom)] shadow-[0_-1px_0_#E7DED3,0_-10px_24px_-14px_rgba(66,33,11,0.25)]"
+      className="fixed inset-x-0 bottom-0 z-20 bg-white md:hidden pb-[env(safe-area-inset-bottom)] shadow-[0_-1px_0_#E7DED3,0_-10px_24px_-14px_rgba(66,33,11,0.25)]"
     >
       <div className="mx-auto flex h-[78px] max-w-md items-end px-1.5 pb-2">
         <Link href="/" aria-current={isFind ? 'page' : undefined} className={tab(isFind)}>

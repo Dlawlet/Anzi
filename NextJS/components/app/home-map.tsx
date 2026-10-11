@@ -20,6 +20,7 @@ export default async function HomeMap() {
   // Public token, restricted by URL in the Mapbox account. Without it the street-lines motif is shown.
   const token = process.env.NEXT_PUBLIC_MAPBOX_TOKEN
   const imageUrl = token ? staticMapUrl(view, token) : null
+  const imageUrl2x = token ? staticMapUrl(view, token, { retina: true }) : null
   const chip = data && (data.streetCount > 0 || data.placeCount > 0)
     ? fmt(t.home.mapChip, { city: CITY, s: data.streetCount, n: data.placeCount })
     : fmt(t.home.mapChipEmpty, { city: CITY })
@@ -27,7 +28,7 @@ export default async function HomeMap() {
 
   return (
     <MapCard view={view} streets={streets} tags={tags} label={label}>
-      <MapPreview view={view} imageUrl={imageUrl} streets={streets} tags={tags} chip={chip} label={label} />
+      <MapPreview view={view} imageUrl={imageUrl} imageUrl2x={imageUrl2x} streets={streets} tags={tags} chip={chip} label={label} />
     </MapCard>
   )
 }

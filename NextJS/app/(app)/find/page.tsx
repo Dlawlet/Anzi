@@ -16,7 +16,7 @@ export default async function FindPage({ searchParams }: { searchParams: Promise
   return (
     <>
       <AppBar />
-      <div className="px-4 pt-6"><FindFlow initialCode={initialQuery} /></div>
+      <div className="col-narrow px-4 pt-6"><FindFlow initialCode={initialQuery} /></div>
     </>
   )
 }

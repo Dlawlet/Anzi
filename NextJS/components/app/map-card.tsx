@@ -1,7 +1,8 @@
 'use client'
 
-import { Component, useEffect, useState } from 'react'
+import { Component, useEffect, useRef, useState } from 'react'
 import dynamic from 'next/dynamic'
+import { createPortal } from 'react-dom'
 import { useI18n } from '@/i18n/provider'
 import { toPercent, type LngLat, type MapView } from '@/utils/staticMap'
 import type { HomeStreet, HomeTag } from '@/utils/homeMap'
@@ -32,7 +33,8 @@ class MapBoundary extends Component<{ onFail: () => void; children: React.ReactN
 type Connection = { saveData?: boolean; effectiveType?: string }
 const connection = (): Connection | undefined => (navigator as Navigator & { connection?: Connection }).connection
 
-// Wraps the server-rendered static preview (children). Tapping "Agrandir" swaps it for the live map.
+// Wraps the server-rendered static preview (children). Tapping "Agrandir" opens the live map full screen on top
+// of the page (the card stays where it is, so nothing jumps), with "Réduire" and Escape to come back.
 export default function MapCard({
   view,
   streets,
@@ -51,6 +53,7 @@ export default function MapCard({
   const [notice, setNotice] = useState<string | null>(null)
   const [lowData, setLowData] = useState(false)
   const [you, setYou] = useState<LngLat | null>(null)
+  const closeButton = useRef<HTMLButtonElement>(null)
 
   useEffect(() => {
     let cancelled = false
@@ -72,6 +75,22 @@ export default function MapCard({
       cancelled = true
     }
   }, [])
+
+  // Full screen: focus goes to "Réduire", Escape closes, the page behind does not scroll; all undone on close.
+  useEffect(() => {
+    if (!open) return
+    const opener = document.activeElement as HTMLElement | null
+    closeButton.current?.focus()
+    const scroll = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    const onKey = (event: KeyboardEvent) => event.key === 'Escape' && setOpen(false)
+    document.addEventListener('keydown', onKey)
+    return () => {
+      document.removeEventListener('keydown', onKey)
+      document.body.style.overflow = scroll
+      opener?.focus?.()
+    }
+  }, [open])
 
   const toggle = () => {
     if (open) {
@@ -97,14 +116,19 @@ export default function MapCard({
   return (
     <>
       <div className="relative">
-        {open ? (
-          <div className="h-[380px]">
+        {children}
+        {open && createPortal(
+          <div role="dialog" aria-modal="true" aria-label={label} className="fixed inset-0 z-[60] bg-sand">
             <MapBoundary onFail={fail}>
               <InteractiveMap center={view.center} zoom={view.zoom} streets={streets} tags={tags} label={label} onFail={fail} />
             </MapBoundary>
-          </div>
-        ) : (
-          children
+            <button ref={closeButton} type="button" onClick={toggle} className="map-btn left-3 top-[max(0.75rem,env(safe-area-inset-top))]">
+              <ShrinkIcon className="h-5 w-5" />
+              {t.home.mapClose}
+            </button>
+          </div>,
+          // Portal: the card is its own stacking context, which would keep the map under the bottom bar.
+          document.body
         )}
         {showYou && youAt && (
           <span
@@ -114,8 +138,8 @@ export default function MapCard({
           />
         )}
         <button type="button" onClick={toggle} aria-expanded={open} className="map-btn bottom-2.5 right-2.5">
-          {open ? <ShrinkIcon className="h-5 w-5" /> : <ExpandIcon className="h-5 w-5" />}
-          {open ? t.home.mapClose : t.home.mapExpand}
+          <ExpandIcon className="h-5 w-5" />
+          {t.home.mapExpand}
         </button>
       </div>
       {(notice || (lowData && !open)) && (

@@ -1,5 +1,13 @@
 /* Anzi component classes (docs/design-2026-10.md sections 2.2-2.7). Tokens live in tailwind.config.js. */
 @layer components {
+  /* Page columns: phone width first, then wider from 768 px (forms stay narrow, Home and lists grow). */
+  .col-narrow {
+    @apply mx-auto w-full max-w-md md:max-w-xl;
+  }
+  .col-wide {
+    @apply mx-auto w-full max-w-md md:max-w-3xl lg:max-w-6xl;
+  }
+
   .btn {
     @apply flex min-h-[58px] w-full items-center justify-center gap-3 rounded-2xl px-[18px] text-center text-[17px] font-bold tracking-tight focus-visible:outline focus-visible:outline-[3px] focus-visible:outline-offset-2 focus-visible:outline-clay disabled:opacity-60;
   }
@@ -116,5 +124,46 @@
 @media (prefers-reduced-motion: reduce) {
   .you-dot::after {
     animation: none;
+  }
+}
+
+/* Home on a wide screen: tablet keeps the phone stack in a wider column; from 1024 px the hero text and the map card
+   share one row (the dark band is the background of both). */
+@media (min-width: 768px) {
+  .home-top {
+    --col: 48rem;
+    --edge: max(0px, calc((100% - var(--col)) / 2));
+  }
+  .home-top > .hero-band {
+    padding-inline: calc(var(--edge) + 1rem);
+  }
+  .home-top > .home-card {
+    margin-inline: auto;
+    width: calc(var(--col) - 2rem);
+    max-width: calc(100% - 2rem);
+  }
+}
+@media (min-width: 1024px) {
+  .home-top {
+    --col: 72rem;
+    display: grid;
+  }
+  .home-top > * {
+    grid-area: 1 / 1;
+  }
+  .home-top > .hero-band {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding-block: 3.5rem;
+    padding-right: calc(50% + 1.5rem);
+  }
+  .home-top > .home-card {
+    z-index: 2;
+    align-self: center;
+    justify-self: end;
+    margin: 3.5rem calc(var(--edge) + 1rem) 3.5rem 0;
+    width: calc(min(var(--col), 100%) / 2 - 2.5rem);
+    max-width: none;
   }
 }

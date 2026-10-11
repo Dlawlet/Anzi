@@ -30,6 +30,10 @@ export function addressLine(place: Addressable, tpl: AddressTemplates): string {
   return [lead, place.quarter, place.city].filter(Boolean).join(', ')
 }
 
+// "12 Rue Manguier" alone (no quarter or city), or the place name when there is no number yet.
+export const addressTitle = (place: Addressable & { name: string }, tpl: AddressTemplates): string =>
+  addressLine({ ...place, quarter: '', city: '' }, tpl) || place.name
+
 type ShareLabels = AddressTemplates & { code: string; landmark: string }
 
 // Name, code and landmark first, then the Google Maps link. The Anzi link goes last, and only when a

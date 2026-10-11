@@ -21,13 +21,13 @@ export default function PlaceActions({ place, t, lead }: { place: PlaceView; t: 
     SITE_URL
   )
 
-  async function copyCode() {
+  async function copyAddress() {
     try {
-      await navigator.clipboard.writeText(place.code)
+      await navigator.clipboard.writeText(addressLine(place, t.card) || place.name)
       setCopied(true)
       setTimeout(() => setCopied(false), 2500)
     } catch {
-      // Clipboard can be blocked; the code is on screen anyway.
+      // Clipboard can be blocked; the address is on screen anyway.
     }
   }
 
@@ -48,7 +48,7 @@ export default function PlaceActions({ place, t, lead }: { place: PlaceView; t: 
     <div className="flex flex-col gap-2">
       {lead === 'share' ? [share, maps] : [maps, share]}
       <GoSheet lat={place.lat} lng={place.lng} label={addressLine(place, t.card) || place.name} open={goOpen} onClose={closeGo} />
-      <button type="button" onClick={copyCode} className={secondaryButton}>
+      <button type="button" onClick={copyAddress} className={secondaryButton}>
         <CopyIcon className="h-6 w-6" />
         {copied ? t.common.copied : t.common.copy}
       </button>

@@ -12,7 +12,7 @@ export default function CreatePage() {
   return (
     <>
       <AppBar />
-      <div className="px-4 pt-6"><CreateFlow /></div>
+      <div className="col-narrow px-4 pt-6"><CreateFlow /></div>
     </>
   )
 }

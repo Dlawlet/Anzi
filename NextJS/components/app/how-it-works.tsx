@@ -10,11 +10,11 @@ export default async function HowItWorks() {
     { Icon: ChatIcon, title: t.home.how3Title, text: t.home.how3Text },
   ]
   return (
-    <section aria-labelledby="home-how" className="px-4 pb-1 pt-7">
+    <section aria-labelledby="home-how" className="col-wide px-4 pb-1 pt-7 md:pt-10">
       <h2 id="home-how" className="text-xl font-extrabold leading-[1.3] tracking-[-0.015em]">{t.home.howTitle}</h2>
-      <ol className="mt-3.5">
+      <ol className="mt-3.5 md:mt-5 md:grid md:grid-cols-3 md:gap-8">
         {steps.map(({ Icon, title, text }, i) => (
-          <li key={title} className={`relative flex gap-3.5 ${i < steps.length - 1 ? 'pb-5 before:absolute before:bottom-0.5 before:left-[23px] before:top-[52px] before:border-l-2 before:border-dashed before:border-sun before:content-[\'\']' : ''}`}>
+          <li key={title} className={`relative flex gap-3.5 ${i < steps.length - 1 ? 'pb-5 md:pb-0 md:before:hidden before:absolute before:bottom-0.5 before:left-[23px] before:top-[52px] before:border-l-2 before:border-dashed before:border-sun before:content-[\'\']' : ''}`}>
             <span className="grid h-12 w-12 flex-none place-items-center rounded-full bg-sun-50 text-clay-700 shadow-[inset_0_0_0_2px_#FF8506]">
               <Icon className="h-[22px] w-[22px]" />
             </span>

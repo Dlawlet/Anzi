@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { useI18n } from '@/i18n/provider'
 import type { Dict } from '@/i18n/dictionary'
 import { readLocalPlaces, removeLocalPlace, replaceLocalPlaces, saveLocalPlace } from '@/utils/localPlaces'
+import { addressTitle } from '@/utils/share'
 import type { PlaceView } from '@/types/place'
 import PlaceActions from './place-actions'
 import PlaceCard from './place-card'
@@ -90,10 +91,11 @@ export default function MineFlow() {
               onClick={() => setOpenCode(openCode === place.code ? null : place.code)}
               className="block min-h-14 w-full rounded-2xl px-4 py-3 text-left focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-green-700"
             >
-              <span className="block break-words text-base font-semibold text-gray-900">{place.name}</span>
+              <span className="block break-words text-base font-semibold text-gray-900">{addressTitle(place, t.card)}</span>
               <span className="block break-words text-base text-gray-700">
-                {place.code} · {t.visibility.short[place.visibility]}
+                {[addressTitle(place, t.card) === place.name ? '' : place.name, place.quarter].filter(Boolean).join(' · ')}
               </span>
+              <span className="block text-base text-gray-700">{t.visibility.short[place.visibility]}</span>
               <span className="mt-1 block text-base font-medium text-green-800">
                 {openCode === place.code ? t.mine.close : t.mine.open}
               </span>

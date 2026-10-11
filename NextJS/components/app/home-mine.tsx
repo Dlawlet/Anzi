@@ -29,7 +29,7 @@ export default function HomeMine({ fallback }: { fallback?: React.ReactNode }) {
   if (places.length === 0) return <>{fallback}</>
 
   return (
-    <section aria-labelledby="home-mine" className="px-4 pt-7">
+    <section aria-labelledby="home-mine" className="col-wide px-4 pt-7 md:pt-10">
       <div className="mb-2.5 flex items-center justify-between">
         <h2 id="home-mine" className="text-xl font-extrabold leading-[1.3] tracking-[-0.015em]">{t.home.myTitle}</h2>
         {places.length > 3 && (
@@ -39,7 +39,7 @@ export default function HomeMine({ fallback }: { fallback?: React.ReactNode }) {
           </Link>
         )}
       </div>
-      <ul className="grid grid-cols-1 gap-2.5">
+      <ul className="grid grid-cols-1 gap-2.5 md:grid-cols-2 lg:grid-cols-3">
         {places.slice(0, 3).map((place) => {
           const title = addressLine({ ...place, quarter: '', city: '' }, t.card) || place.name
           const sub = [title === place.name ? '' : place.name, place.quarter].filter(Boolean).join(' · ')

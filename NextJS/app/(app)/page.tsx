@@ -26,13 +26,15 @@ export default async function Home() {
   return (
     <>
       <AppBar variant="dark" />
-      <HeroBand />
-      <section aria-label={t.home.searchLabel} className="relative z-[1] -mt-[74px] mx-4 overflow-hidden rounded-3xl bg-white shadow-warm2">
-        <Suspense fallback={<MapPreview view={PLACEHOLDER_VIEW} imageUrl={null} streets={[]} tags={[]} chip="Yaoundé" label="Yaoundé" />}>
-          <HomeMap />
-        </Suspense>
-        <AddressSearchBox />
-      </section>
+      <div className="home-top">
+        <HeroBand />
+        <section aria-label={t.home.searchLabel} className="home-card relative z-[1] -mt-[74px] mx-4 overflow-hidden rounded-3xl bg-white shadow-warm2">
+          <Suspense fallback={<MapPreview view={PLACEHOLDER_VIEW} imageUrl={null} streets={[]} tags={[]} chip="Yaoundé" label="Yaoundé" />}>
+            <HomeMap />
+          </Suspense>
+          <AddressSearchBox />
+        </section>
+      </div>
       <HomeMine fallback={<HowItWorks />} />
       <Credits />
     </>

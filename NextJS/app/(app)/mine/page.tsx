@@ -12,7 +12,7 @@ export default function MinePage() {
   return (
     <>
       <AppBar />
-      <div className="px-4 pt-6"><MineFlow /></div>
+      <div className="col-narrow px-4 pt-6"><MineFlow /></div>
     </>
   )
 }

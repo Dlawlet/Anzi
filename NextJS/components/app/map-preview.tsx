@@ -1,4 +1,3 @@
-import Image from 'next/image'
 import { chipPlacement, keepFree, linePath, toPercent, type MapView } from '@/utils/staticMap'
 import type { HomeStreet, HomeTag } from '@/utils/homeMap'
 import { CategoryIcon } from './icons'
@@ -11,6 +10,7 @@ const MAX_CHIPS = 4 // street name chips per view
 export default function MapPreview({
   view,
   imageUrl,
+  imageUrl2x,
   streets,
   tags,
   chip,
@@ -18,6 +18,7 @@ export default function MapPreview({
 }: {
   view: MapView
   imageUrl: string | null
+  imageUrl2x?: string | null
   streets: HomeStreet[]
   tags: HomeTag[]
   chip: string
@@ -49,8 +50,12 @@ export default function MapPreview({
   return (
     <div className="map-motif relative overflow-hidden" style={{ aspectRatio: `${view.width} / ${view.height}` }} role="img" aria-label={label}>
       {imageUrl && (
-        // Remote image from Mapbox: the optimizer would only add a hop (and use the free image quota).
-        <Image src={imageUrl} alt="" width={view.width} height={view.height} priority unoptimized className="absolute inset-0 h-full w-full object-cover" />
+        // Remote image from Mapbox: the optimizer would only add a hop (and use the free image quota). Phones
+        // load the light 1x image; the sharper @2x one (same area) is only requested from 768 px up.
+        <picture>
+          {imageUrl2x && <source media="(min-width: 768px)" srcSet={imageUrl2x} />}
+          <img src={imageUrl} alt="" width={view.width} height={view.height} fetchPriority="high" decoding="async" className="absolute inset-0 h-full w-full object-cover" />
+        </picture>
       )}
       <svg viewBox={`0 0 ${view.width} ${view.height}`} preserveAspectRatio="none" className="absolute inset-0 h-full w-full" aria-hidden="true" fill="none" strokeLinecap="round" strokeLinejoin="round">
         {streets
