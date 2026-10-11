@@ -27,9 +27,10 @@ describe("lookupAddresses", () => {
     const { select, limit } = chain([]);
     const res = await lookupAddresses(req("Idriss 1.8"));
     expect(res.status).toBe(200);
-    expect(find).toHaveBeenCalledWith({
-      $and: [{ name: { $regex: "Idriss", $options: "i" } }, { name: { $regex: String.raw`1\.8`, $options: "i" } }],
-    });
+    const [first, second] = find.mock.calls[0][0].$and;
+    expect(new RegExp(first.$or[0].name.$regex, "i").test("138 Rue Idriss")).toBe(true);
+    expect(first.$or[1].city).toEqual(first.$or[0].name);
+    expect(second.$or[0].name.$regex).toBe(String.raw`1\.8`);
     expect(select).toHaveBeenCalledWith("name coordinates city");
     expect(limit).toHaveBeenCalledWith(10);
   });
@@ -42,6 +43,21 @@ describe("lookupAddresses", () => {
     ]);
     const body = await (await lookupAddresses(req("idriss"))).json();
     expect(body.matches).toEqual([{ id: "a1", title: "138 Rue Idriss 7104 Yaounde VI", city: "yaoundé", lng: 11.47, lat: 3.84 }]);
+  });
+
+  it("ignores brackets and matches accents and Decimal128 coordinates", async () => {
+    chain([
+      { _id: "a1", name: "46 Rue Antoinette 1060 Yaounde VI ", city: "Yaounde", coordinates: [{ toString: () => "11.48" }, { toString: () => "3.85" }] },
+    ]);
+    const res = await lookupAddresses(req("rue antoinette (yaoundé)"));
+    const words = find.mock.calls[0][0].$and;
+    expect(words).toHaveLength(3);
+    const city = new RegExp(words[2].$or[1].city.$regex, "i");
+    expect(city.test("Yaounde")).toBe(true);
+    expect(city.test("YAOUNDÉ")).toBe(true);
+    const body = await res.json();
+    expect(body.matches).toEqual([{ id: "a1", title: "46 Rue Antoinette 1060 Yaounde VI", city: "Yaounde", lng: 11.48, lat: 3.85 }]);
+    expect((await lookupAddresses(req("()"))).status).toBe(400);
   });
 
   it("rejects empty search and applies the rate limit", async () => {
