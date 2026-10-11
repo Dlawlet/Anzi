@@ -18,6 +18,7 @@ const architects_daughter = Architects_Daughter({
 export const metadata = {
   title: 'Anzi',
   description: 'A simple address and a code to share, so people can find you easily.',
+  icons: { icon: '/icons/icon-192.png', apple: '/icons/apple-touch-icon.png' },
 }
 
 export default function RootLayout({

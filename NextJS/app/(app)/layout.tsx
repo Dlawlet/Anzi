@@ -1,9 +1,13 @@
 import Link from 'next/link'
+import type { Viewport } from 'next'
 import { getI18n } from '@/i18n/server'
 import { I18nProvider } from '@/i18n/provider'
 import BottomNav from '@/components/app/bottom-nav'
 import LangToggle from '@/components/app/lang-toggle'
+import SwRegister from '@/components/app/sw-register'
 import { PinHouseIcon } from '@/components/app/icons'
+
+export const viewport: Viewport = { themeColor: '#15803d' }
 
 // Light, mobile-first frame of the new product screens (plan section 4).
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
@@ -23,6 +27,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         </header>
         <main className="mx-auto max-w-md px-4 pb-28 pt-6">{children}</main>
         <BottomNav />
+        <SwRegister />
       </div>
     </I18nProvider>
   )
