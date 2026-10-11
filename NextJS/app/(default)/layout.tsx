@@ -7,6 +7,7 @@ import 'aos/dist/aos.css'
 
 import PageIllustration from '@/components/page-illustration'
 import Footer from '@/components/ui/footer'
+import LegacyShell from '@/components/legacy-shell'
 
 export default function DefaultLayout({
   children,
@@ -24,7 +25,7 @@ export default function DefaultLayout({
   })
 
   return (
-    <>
+    <LegacyShell>
       <main className="grow">
 
         <PageIllustration />
@@ -34,6 +35,6 @@ export default function DefaultLayout({
       </main>
 
       <Footer />
-    </>
+    </LegacyShell>
   )
 }
