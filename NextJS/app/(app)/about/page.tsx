@@ -3,14 +3,12 @@ import Link from 'next/link'
 import { getI18n } from '@/i18n/server'
 import AppBar from '@/components/app/app-bar'
 import Credits from '@/components/app/credits'
+import ContactForm from '@/components/app/contact-form'
 
 export async function generateMetadata(): Promise<Metadata> {
   const { t } = await getI18n()
   return { title: `${t.about.title} - ${t.brand}`, description: t.about.intro }
 }
-
-// The contact address is set per deployment (NextJS/.env.local, Vercel); without it the page says it is coming.
-const CONTACT_EMAIL = process.env.NEXT_PUBLIC_CONTACT_EMAIL?.trim() || null
 
 // About and contact: what Anzi is, why street names are community names, what is kept, how to reach us.
 export default async function AboutPage() {
@@ -41,13 +39,7 @@ export default async function AboutPage() {
           <section aria-labelledby="about-contact" className="rounded-2xl bg-night-900 p-4 text-white">
             <h2 id="about-contact" className="text-xl font-extrabold leading-snug">{a.contactTitle}</h2>
             <p className="mt-1.5 text-base text-night-300">{a.contact}</p>
-            {CONTACT_EMAIL ? (
-              <a href={`mailto:${CONTACT_EMAIL}`} className="mt-3 inline-flex min-h-12 items-center break-all text-[17px] font-bold text-sun-200 underline">
-                {CONTACT_EMAIL}
-              </a>
-            ) : (
-              <p className="mt-3 text-base font-semibold text-sun-200">{a.contactSoon}</p>
-            )}
+            <ContactForm />
           </section>
         </div>
 
