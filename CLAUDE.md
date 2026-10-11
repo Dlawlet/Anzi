@@ -13,6 +13,16 @@ Source of truth: `.claude/jarvis.json` → `commands`. Use them, do not guess. R
 - format / test: none configured. Dev server: `npm run dev` in `NextJS/` (needs `.env.local`).
 - Install: `npm ci --legacy-peer-deps` in `NextJS/` (plain `npm ci` fails on a mapbox-gl peer conflict).
 
+## Direction
+- Refresh in progress (Oct 2026): mobile-first, French default + English, address = Place + Street + short code, Google Maps handoff via links. Plan: `docs/refresh-plan.md`; code findings: `docs/review-2026-10.md`; verified market/legal/cost facts with sources: `docs/research-2026-10.md`. Streets are a commune competence by law: Anzi street names are "community names", never official. Existing code is legacy: do not extend the old `Address` model, build to the plan.
+- Target users: non-technical Cameroonians on slow, expensive mobile data. Speed and plain wording beat features.
+- Do not display the vercel.app URL or QR codes in UI, share text or marketing (no custom domain yet); use one `NEXT_PUBLIC_SITE_URL` constant.
+
+## Project tooling
+- Rules: `.claude/rules/api.md` (API/models), `.claude/rules/ui.md` (components/pages). Skills: `new-endpoint`, `mobile-check`, `verify`.
+- Hook `.claude/hooks/anzi-guard.sh` (after Edit/Write) flags: HTML-injection sinks, secret-looking `NEXT_PUBLIC_*`, raw errors returned, PII in logs, unescaped `$regex`, `route.ts` without DB connect, public assets > 150 KB. Fix what it reports.
+- `yarn install/add` is denied; `npm install`, `vercel deploy/env`, `mongosh/mongodump` ask first.
+
 ## Working agreement
 - Read `status.md` first; do not re-read the whole repo. Update it at the end of any significant change (what changed, why, next steps, known issues).
 - Prefer small, verifiable steps. After a change run the `verify` skill before saying "done".

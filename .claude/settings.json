@@ -9,5 +9,10 @@
       "Read(./.env)", "Read(./.env.*)", "Read(./secrets/**)", "Read(**/*.pem)", "Read(**/*.key)"
     ]
   },
+  "hooks": {
+    "PostToolUse": [
+      { "matcher": "Edit|Write", "hooks": [ { "type": "command", "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/anzi-guard.sh\"", "timeout": 10 } ] }
+    ]
+  },
   "enabledPlugins": { "jarvis@jarvis": true }
 }

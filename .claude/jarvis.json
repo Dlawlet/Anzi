@@ -15,5 +15,16 @@
   "gate": {
     "run": ["typecheck", "lint"]
   },
+  "guard": {
+    "extra_deny": [
+      "(^|[;&|[:space:]])yarn[[:space:]]+(install|add|upgrade|remove)"
+    ],
+    "extra_ask": [
+      "vercel[[:space:]]+(deploy|--prod|env|rm|remove)",
+      "mongo(sh|dump|import|restore|export)([[:space:]]|$)",
+      "npm[[:space:]]+audit[[:space:]]+fix",
+      "npm[[:space:]]+(install|i|update|uninstall)[[:space:]]"
+    ]
+  },
   "jarvis_kit_version": "0.5.0"
 }
