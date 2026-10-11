@@ -10,8 +10,8 @@ Source of truth: `.claude/jarvis.json` → `commands`. Use them, do not guess. R
 - lint: `cd NextJS && npm run lint`
 - typecheck: `cd NextJS && npx tsc --noEmit`
 - build: `cd NextJS && npm run build`
-- format / test: none configured. Dev server: `npm run dev` in `NextJS/` (needs `.env.local`).
-- Install: `npm ci` in `NextJS/` (Node >= 20.19). Lint is `eslint .` (Next 16 removed `next lint`).
+- test: `cd NextJS && npm test` (Vitest; `*.test.js` next to the code). CI: `.github/workflows/ci.yml` (lint, tsc, test, build). No formatter. Dev server: `npm run dev` in `NextJS/` (needs `.env.local`).
+- Install: `npm ci` in `NextJS/` (Node >= 22.12). Lint is `eslint .` (Next 16 removed `next lint`).
 
 ## Direction
 - Refresh in progress (Oct 2026): mobile-first, French default + English, address = Place + Street + short code, Google Maps handoff via links. Plan: `docs/refresh-plan.md`; code findings: `docs/review-2026-10.md`; verified market/legal/cost facts with sources: `docs/research-2026-10.md`. Streets are a commune competence by law: Anzi street names are "community names", never official. Existing code is legacy: do not extend the old `Address` model, build to the plan.

@@ -4,6 +4,7 @@ import "mapbox-gl/dist/mapbox-gl.css";
 import mapboxgl from "mapbox-gl";
 const MapboxGeocoder = require("mapbox-gl-geocoder");
 import "../app/css/MapComponent.css";
+import { escapeHtml } from "../utils/validate.js";
 import { NextRequest, NextResponse } from "next/server";
 
 export default function MapComponent({ widtho, heighto, py, page}: any) {
@@ -231,15 +232,6 @@ export default function MapComponent({ widtho, heighto, py, page}: any) {
   }
 }
 
-
-function escapeHtml(text: string) {
-  return text
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#39;");
-}
 
 function fly(map: any) {
   map.addControl(new mapboxgl.GeolocateControl({

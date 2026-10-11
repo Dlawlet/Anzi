@@ -8,12 +8,12 @@
     "format": "",
     "lint": "cd NextJS && npm run lint",
     "typecheck": "cd NextJS && npx tsc --noEmit",
-    "test": "",
+    "test": "cd NextJS && npm test",
     "build": "cd NextJS && npm run build",
     "run": ""
   },
   "gate": {
-    "run": ["typecheck", "lint"]
+    "run": ["typecheck", "lint", "test"]
   },
   "guard": {
     "extra_deny": [

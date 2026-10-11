@@ -1,5 +1,15 @@
 export const MAX_SEARCH_LENGTH = 60;
 
+// Escape text before it goes into an HTML string (innerHTML sinks in third-party widgets).
+export function escapeHtml(text) {
+  return String(text)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
 // Escape regex metacharacters so user text is matched literally.
 export function escapeRegex(text) {
   return String(text).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
