@@ -1,4 +1,4 @@
-import { addAddress, deleteAddress, getAddFromId, getAddresses, updateAddress, getAddFromCoord, getAddFromName} from './address_controller.js';
+import { addAddress, getAddFromId, getAddresses, getAddFromCoord, getAddFromName } from './address_controller.js';
 import { NextRequest } from 'next/server';
 import {connectToDatabase} from '../../../../utils/connectMongo.js';
 
@@ -33,19 +33,3 @@ export async function POST(req: Request) {
   const responses = await addAddress(req);
   return responses;
 }
-
-
-
-export async function PUT(req: Request) {
-  await connectToDatabase();
-  const responses = await updateAddress(req);
-  return responses;
-} 
-
-export async function DELETE(req: Request) {
-  await connectToDatabase();
-  const responses = await deleteAddress(req);
-  return responses;
-}
-
-
