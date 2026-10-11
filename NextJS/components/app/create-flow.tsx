@@ -8,12 +8,13 @@ import type { Dict } from '@/i18n/dictionary'
 import { CATEGORIES, REGIONS } from '@/utils/placeValidation.js'
 import { CITIES, regionForCity } from '@/utils/cities'
 import { GPS_MAX_M, gpsQuality, inCameroon } from '@/utils/gps'
-import { buildShareText, mapsViewUrl, whatsappUrl } from '@/utils/share'
-import { SITE_URL } from '@/utils/site'
+import { mapsViewUrl } from '@/utils/share'
 import { saveLocalPlace } from '@/utils/localPlaces'
 import type { PlaceView } from '@/types/place'
 import PlaceCard from './place-card'
-import { CheckIcon, CopyIcon, CrosshairIcon, NavigateIcon, ShareIcon } from './icons'
+import PlaceActions from './place-actions'
+import { inputClass, linkButton, primaryButton, secondaryButton } from './ui-classes'
+import { CheckIcon, CrosshairIcon } from './icons'
 import { useGps, type GpsFix } from './use-gps'
 
 type Step = 'where' | 'what' | 'details' | 'consent'
@@ -48,15 +49,6 @@ const FIELD_STEP: Record<string, Step> = {
   location: 'where', name: 'what', category: 'what', city: 'details', region: 'details', landmark: 'details',
   quarter: 'details', houseNumber: 'details', visibility: 'consent', consent: 'consent', adultOrParentOk: 'consent',
 }
-
-const inputClass = (invalid: boolean) =>
-  `block w-full min-h-12 rounded-lg border bg-white px-3 py-3 text-base text-gray-900 focus:border-green-700 focus:ring-2 focus:ring-green-700 ${invalid ? 'border-red-700' : 'border-gray-400'}`
-const primaryButton =
-  'flex min-h-12 w-full items-center justify-center gap-2 rounded-lg bg-green-700 px-4 py-3 text-base font-semibold text-white hover:bg-green-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-green-700 disabled:opacity-60'
-const secondaryButton =
-  'flex min-h-12 w-full items-center justify-center gap-2 rounded-lg border-2 border-green-700 bg-white px-4 py-3 text-base font-semibold text-green-800 hover:bg-green-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-green-700'
-const linkButton =
-  'inline-flex min-h-12 items-center px-2 text-base font-medium text-gray-700 underline hover:text-gray-900 focus-visible:outline focus-visible:outline-2 focus-visible:outline-green-700'
 
 function FieldShell(props: {
   id: string
@@ -569,23 +561,6 @@ function Done(props: {
   onAnother: () => void
 }) {
   const { place, t, headingRef, onAnother } = props
-  const [copied, setCopied] = useState(false)
-
-  const shareText = buildShareText(
-    place,
-    { code: t.share.code, landmark: t.share.landmark, houseNo: t.card.houseNo },
-    SITE_URL
-  )
-
-  async function copyCode() {
-    try {
-      await navigator.clipboard.writeText(place.code)
-      setCopied(true)
-      setTimeout(() => setCopied(false), 2500)
-    } catch {
-      // Clipboard can be blocked; the code is on screen anyway.
-    }
-  }
 
   return (
     <div>
@@ -600,20 +575,8 @@ function Done(props: {
         {t.visibility.short[place.visibility]}. {t.create.done.savedOnDevice}
       </p>
 
-      <div className="mt-5 flex flex-col gap-2">
-        <a href={whatsappUrl(shareText)} target="_blank" rel="noopener noreferrer" className={primaryButton}>
-          <ShareIcon className="h-6 w-6" />
-          {t.common.whatsapp}
-        </a>
-        <a href={mapsViewUrl(place)} target="_blank" rel="noopener noreferrer" className={secondaryButton}>
-          <NavigateIcon className="h-6 w-6" />
-          {t.common.openMaps}
-        </a>
-        <button type="button" onClick={copyCode} className={secondaryButton}>
-          <CopyIcon className="h-6 w-6" />
-          {copied ? t.common.copied : t.common.copy}
-        </button>
-        <p role="status" className="sr-only">{copied ? t.common.copied : ''}</p>
+      <div className="mt-5">
+        <PlaceActions place={place} t={t} lead="share" />
       </div>
 
       <div className="mt-4 flex flex-wrap gap-x-4">
