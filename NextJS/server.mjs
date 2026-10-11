@@ -20,7 +20,7 @@ app.prepare().then(() => {
 
 process.on('SIGINT', async () => {
   try {
-    await mongoose.disconnect(process.env.NEXT_PUBLIC_MONGODB_URI);
+    await mongoose.disconnect();
     console.log('Disconnected from MongoDB');
     process.exit(0);
   } catch (error) {

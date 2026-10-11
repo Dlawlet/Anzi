@@ -9,7 +9,7 @@ export async function connectToDatabase () {
   }
   try {
     //console.log('Connecting to MongoDB');
-    await mongoose.connect(process.env.NEXT_PUBLIC_MONGODB_URI);
+    await mongoose.connect(process.env.MONGODB_URI);
     
 
     isConnected = true; // Set isConnected to true immediately after successful connection
