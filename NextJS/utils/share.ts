@@ -1,4 +1,5 @@
 import { fmt } from '../i18n/lang'
+import { googleDirUrl } from './mapsLinks'
 import type { PlaceView } from '../types/place'
 
 type Located = Pick<PlaceView, 'lat' | 'lng'>
@@ -11,8 +12,7 @@ const coords = ({ lat, lng }: Located) => `${lat.toFixed(6)},${lng.toFixed(6)}`
 export const mapsViewUrl = (place: Located) =>
   `https://www.google.com/maps/search/?api=1&query=${coords(place)}`
 
-export const mapsNavigateUrl = (place: Located) =>
-  `https://www.google.com/maps/dir/?api=1&destination=${coords(place)}&travelmode=driving`
+export const mapsNavigateUrl = (place: Located) => googleDirUrl(place)
 
 export const whatsappUrl = (text: string) => `https://wa.me/?text=${encodeURIComponent(text)}`
 

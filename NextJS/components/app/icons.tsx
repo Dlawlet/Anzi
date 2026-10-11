@@ -69,6 +69,9 @@ export const DotsIcon = ({ className }: Props) => (
 export const ChevronIcon = ({ className }: Props) => (
   <svg {...base} className={className}><path d="m9 6 6 6-6 6" /></svg>
 )
+export const PhoneIcon = ({ className }: Props) => (
+  <svg {...base} className={className}><rect x="7" y="2.5" width="10" height="19" rx="2.5" /><path d="M11 18.5h2" /></svg>
+)
 // Generic speech-bubble glyph, not the WhatsApp trademark artwork.
 export const ChatIcon = ({ className }: Props) => (
   <svg {...base} className={className} fill="currentColor" stroke="none"><path d="M12 2.5a9.5 9.5 0 0 0-8.2 14.3L2.6 21.4l4.7-1.2A9.5 9.5 0 1 0 12 2.5Zm0 1.8a7.7 7.7 0 1 1-4.1 14.2l-.3-.2-2.6.7.7-2.5-.2-.3A7.7 7.7 0 0 1 12 4.3Z" /><path d="M9.1 7.3c-.2-.4-.4-.4-.6-.4h-.5c-.2 0-.5.1-.7.3-.3.3-.9.9-.9 2.2s.9 2.5 1 2.7c.2.2 1.8 2.8 4.4 3.8 2.2.9 2.6.7 3.1.6.5 0 1.5-.6 1.7-1.2.2-.6.2-1.1.2-1.2-.1-.1-.2-.2-.5-.3l-1.7-.8c-.2-.1-.4-.1-.6.1l-.8 1c-.1.2-.3.2-.5.1-.3-.1-1.1-.4-2-1.3-.8-.7-1.3-1.5-1.4-1.8-.2-.3 0-.4.1-.5l.4-.5.3-.5v-.5l-.9-1.9Z" /></svg>

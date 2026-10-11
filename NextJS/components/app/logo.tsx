@@ -6,9 +6,11 @@ const RATIO = 183 / 256
 
 export default function Logo({ size = 40, onDark = false, priority = false }: { size?: number; onDark?: boolean; priority?: boolean }) {
   const height = Math.round(size * (onDark ? 0.75 : 1))
+  const width = Math.round(height * RATIO)
   const mark = (
-    // Small static PNG: skip the image optimizer (free-tier transformation quota).
-    <Image src="/brand/anzi-logo.png" alt="" width={Math.round(height * RATIO)} height={height} priority={priority} unoptimized />
+    // Small static PNG: skip the image optimizer (free-tier transformation quota). Tailwind's preflight sets
+    // `height: auto`, which rounds off the attribute height and makes Next warn; the size is pinned in style.
+    <Image src="/brand/anzi-logo.png" alt="" width={width} height={height} style={{ width, height }} priority={priority} unoptimized />
   )
   if (!onDark) return mark
   return (
