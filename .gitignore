@@ -1,1 +1,4 @@
 /MERN
+.claude/settings.local.json
+.claude/jarvis.local.json
+.claude/jarvis-proposed/

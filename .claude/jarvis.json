@@ -1,0 +1,19 @@
+{
+  "version": 1,
+  "project": {
+    "name": "anzi",
+    "kind": "poc"
+  },
+  "commands": {
+    "format": "",
+    "lint": "cd NextJS && npm run lint",
+    "typecheck": "cd NextJS && npx tsc --noEmit",
+    "test": "",
+    "build": "cd NextJS && npm run build",
+    "run": ""
+  },
+  "gate": {
+    "run": ["typecheck", "lint"]
+  },
+  "jarvis_kit_version": "0.5.0"
+}
