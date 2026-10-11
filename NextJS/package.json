@@ -6,32 +6,34 @@
     "dev": "node  server.mjs",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "eslint ."
   },
   "dependencies": {
-    "@headlessui/react": "^1.7.15",
-    "@mapbox/mapbox-gl-directions": "^4.1.1",
+    "@headlessui/react": "^2.2.10",
     "@tailwindcss/forms": "^0.5.3",
-    "@types/node": "20.4.1",
-    "@types/react": "18.2.14",
-    "@types/react-dom": "18.2.6",
+    "@types/node": "^20.19.43",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
     "aos": "^2.3.4",
-    "autoprefixer": "10.4.14",
-    "eslint": "8.44.0",
-    "eslint-config-next": "13.4.9",
+    "autoprefixer": "^10.4.14",
+    "eslint": "^9.39.5",
+    "eslint-config-next": "^16.4.0",
     "mapbox-gl": "^2.15.0",
     "mapbox-gl-geocoder": "^2.0.1",
-    "mongoose": "^7.5.0",
-    "next": "13.4.9",
-    "postcss": "8.4.25",
-    "react": "18.2.0",
-    "react-dom": "18.2.0",
-    "sharp": "^0.32.5",
+    "mongoose": "^9.11.1",
+    "next": "^16.4.0",
+    "postcss": "^8.5.29",
+    "react": "^19.3.0",
+    "react-dom": "^19.3.0",
+    "sharp": "^0.35.5",
     "tailwindcss": "^3.3.2",
-    "typescript": "5.1.6"
+    "typescript": "^5.9.3"
   },
   "devDependencies": {
     "@types/aos": "^3.0.4",
-    "@types/mapbox-gl": "^2.7.11"
+    "@types/mapbox-gl": "^2.7.21"
+  },
+  "engines": {
+    "node": ">=20.19.0"
   }
 }

@@ -1,9 +1,9 @@
 import { addAddress, deleteAddress, getAddFromId, getAddresses, updateAddress, getAddFromCoord, getAddFromName} from './address_controller.js';
-import { NextRequest, NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
 import {connectToDatabase} from '../../../../utils/connectMongo.js';
 
 
-export  async function GET(req: NextRequest, res: NextResponse) {
+export  async function GET(req: NextRequest) {
   await connectToDatabase();
   let responses;
   const id = req.nextUrl.searchParams.get('id');
@@ -11,40 +11,40 @@ export  async function GET(req: NextRequest, res: NextResponse) {
   const search = req.nextUrl.searchParams.get('search');
 
   if (id) {
-    responses = await getAddFromId(req, res);
+    responses = await getAddFromId(req);
     
 
   } else if (coordo) {
-    responses = await getAddFromCoord(req, res, coordo);
+    responses = await getAddFromCoord(req, coordo);
 
   } else if (search) {
-    responses = await getAddFromName(req, res, search);
+    responses = await getAddFromName(req, search);
   
   }
 
   else { 
-    responses = await getAddresses(req, res);
+    responses = await getAddresses(req);
   }
   return responses;
 }
 
-export async function POST(req: Request, res: Response) {
+export async function POST(req: Request) {
   await connectToDatabase();
-  const responses = await addAddress(req, res);
+  const responses = await addAddress(req);
   return responses;
 }
 
 
 
-export async function PUT(req: Request, res: Response) {
+export async function PUT(req: Request) {
   await connectToDatabase();
-  const responses = await updateAddress(req, res);
+  const responses = await updateAddress(req);
   return responses;
 } 
 
-export async function DELETE(req: Request, res: Response) {
+export async function DELETE(req: Request) {
   await connectToDatabase();
-  const responses = await deleteAddress(req, res);
+  const responses = await deleteAddress(req);
   return responses;
 }
 

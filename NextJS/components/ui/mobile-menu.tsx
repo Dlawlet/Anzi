@@ -5,6 +5,7 @@ import Link from 'next/link'
 
 export default function MobileMenu() {
   const [mobileNavOpen, setMobileNavOpen] = useState<boolean>(false)
+  const [navHeight, setNavHeight] = useState<number | undefined>(undefined)
 
   const trigger = useRef<HTMLButtonElement>(null)
   const mobileNav = useRef<HTMLDivElement>(null)
@@ -38,7 +39,10 @@ export default function MobileMenu() {
         className={`hamburger ${mobileNavOpen && 'active'}`}
         aria-controls="mobile-nav"
         aria-expanded={mobileNavOpen}
-        onClick={() => setMobileNavOpen(!mobileNavOpen)}
+        onClick={() => {
+          setNavHeight(mobileNav.current?.scrollHeight)
+          setMobileNavOpen(!mobileNavOpen)
+        }}
       >
         <span className="sr-only">Menu</span>
         <svg
@@ -57,7 +61,7 @@ export default function MobileMenu() {
         id="mobile-nav"
         ref={mobileNav}
         className="absolute top-full z-20 left-0 w-full px-4 sm:px-6 overflow-hidden transition-all duration-300 ease-in-out"
-        style={mobileNavOpen ? { maxHeight: mobileNav.current?.scrollHeight, opacity: 1 } : { maxHeight: 0, opacity: 0.8 }}
+        style={mobileNavOpen ? { maxHeight: navHeight, opacity: 1 } : { maxHeight: 0, opacity: 0.8 }}
       >
         <ul className="bg-gray-800 px-4 py-2">
           
