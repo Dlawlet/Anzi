@@ -36,15 +36,16 @@ export const addressTitle = (place: Addressable & { name: string }, tpl: Address
 
 type ShareLabels = AddressTemplates & { code: string; landmark: string }
 
-// Name, code and landmark first, then the Google Maps link. The Anzi link goes last, and only when a
-// real domain is configured (see utils/site.ts).
+// Name, street address and landmark first, then the Google Maps link, then the backup code (the code is how a
+// link-only place is opened in Anzi, but it is never the first thing the reader sees). The Anzi link goes last, and
+// only when a real domain is configured (see utils/site.ts).
 export function buildShareText(place: Shareable, labels: ShareLabels, siteUrl: string | null): string {
   const lines = [
     place.name,
-    `${labels.code}: ${place.code}`,
     addressLine(place, labels),
     place.landmark ? `${labels.landmark}: ${place.landmark}` : '',
     mapsViewUrl(place),
+    `${labels.code}: ${place.code}`,
     siteUrl ?? '',
   ]
   return lines.filter(Boolean).join('\n')

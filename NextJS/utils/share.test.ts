@@ -33,14 +33,14 @@ describe("share links", () => {
     expect(addressLine({ ...place, street: null, houseNumber: null, officialNumber: "7" }, tpl)).toBe("N° 7, Bastos, Yaoundé");
     expect(addressLine({ street: null, houseNumber: null, houseSuffix: "", officialNumber: "", quarter: "", city: "Douala" }, tpl)).toBe("Douala");
   });
-  it("leads with name, code and landmark and ends with the maps link", () => {
+  it("leads with name, address and landmark; the backup code is never the first line", () => {
     const text = buildShareText(place, labels, null);
     expect(text.split("\n")).toEqual([
       "Chez Mama Julie",
-      "Code Anzi: YDE-7K4M",
       "12 Rue Manguier, Bastos, Yaoundé",
       "Repère: Behind the pharmacy, yellow gate",
       "https://www.google.com/maps/search/?api=1&query=3.866712,11.516734",
+      "Code Anzi: YDE-7K4M",
     ]);
   });
   it("appends the site link last, only when one is configured", () => {

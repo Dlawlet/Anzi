@@ -2,97 +2,112 @@
 
 import { useCallback, useEffect, useState } from 'react'
 import { useI18n } from '@/i18n/provider'
+import { fmt } from '@/i18n/lang'
 import type { Dict } from '@/i18n/dictionary'
-import { normalizeCode } from '@/utils/codeFormat.js'
-import { addressLine } from '@/utils/share'
-import type { PlaceView } from '@/types/place'
-import GoSheet from './go-sheet'
-import PlaceActions from './place-actions'
-import PlaceCard from './place-card'
-import { NavigateIcon, SearchIcon } from './icons'
-import { inputClass, primaryButton, secondaryButton } from './ui-classes'
-
-// An address of the old collection found by free text (/api/lookup): a position and a label only.
-type Match = { id: string; title: string; city: string; lat: number; lng: number }
+import { hitLine, hitTitle, searchAddress, searchLocal, type Hit } from '@/utils/findClient'
+import { readLocalPlaces } from '@/utils/localPlaces'
+import { addRecent, clearRecent, readRecent, type Recent } from '@/utils/recentLocal'
+import FindResult from './find-result'
+import { ChevronIcon, SearchIcon } from './icons'
+import { inputClass, linkButton, primaryButton } from './ui-classes'
 
 type View =
   | { kind: 'idle' }
   | { kind: 'loading' }
   | { kind: 'error'; message: string }
-  | { kind: 'place'; place: PlaceView }
-  | { kind: 'list'; places: PlaceView[]; matches: Match[] }
+  | { kind: 'list'; hits: Hit[]; q: string }
+  | { kind: 'result'; hit: Hit; fromList: Hit[] | null; q: string }
 
-// A code ("yde 7k4m") looks the place up directly; any other text searches public places by name.
-async function lookup(raw: string, t: Dict): Promise<View> {
-  const text = raw.trim()
-  if (!text) return { kind: 'error', message: t.find.tooShort }
-  const code = normalizeCode(text)
-
-  try {
-    if (code) {
-      const res = await fetch(`/api/places/${encodeURIComponent(code)}`)
-      if (res.status === 429) return { kind: 'error', message: t.find.errors.tooMany }
-      if (res.status === 404 || res.status === 400) return { kind: 'error', message: t.find.notFoundCode }
-      if (!res.ok) return { kind: 'error', message: t.find.errors.generic }
-      return { kind: 'place', place: (await res.json()) as PlaceView }
-    }
-    // Free text: public places by name and old addresses by words ("Idriss 138"), asked at the same time.
-    const q = encodeURIComponent(text)
-    const [placesRes, lookupRes] = await Promise.all([fetch(`/api/places?search=${q}`), fetch(`/api/lookup?q=${q}`)])
-    if (placesRes.status === 429 || lookupRes.status === 429) return { kind: 'error', message: t.find.errors.tooMany }
-    if (!placesRes.ok && !lookupRes.ok) return { kind: 'error', message: t.find.errors.generic }
-    const places = placesRes.ok ? (((await placesRes.json()).places ?? []) as PlaceView[]) : []
-    const matches = lookupRes.ok ? (((await lookupRes.json()).matches ?? []) as Match[]) : []
-    return places.length + matches.length > 0 ? { kind: 'list', places, matches } : { kind: 'error', message: t.find.notFoundName }
-  } catch {
+// One box: "Manguier 12", a code or a public name. Several answers make a list ("Laquelle ?"), one answer goes
+// straight to the result screen. Without a connection, the addresses saved on this phone answer.
+async function run(raw: string, t: Dict): Promise<View> {
+  const q = raw.trim()
+  if (!q) return { kind: 'error', message: t.find.tooShort }
+  const own = searchLocal(q, readLocalPlaces())
+  if (!navigator.onLine) {
+    if (own.length === 1) return { kind: 'result', hit: own[0], fromList: null, q }
+    if (own.length > 1) return { kind: 'list', hits: own, q }
     return { kind: 'error', message: t.find.errors.network }
   }
+  const outcome = await searchAddress(q)
+  if (outcome.status === 'error') return { kind: 'error', message: t.find.errors[outcome.reason] }
+  if (outcome.status === 'none') {
+    // The server found nothing, but this phone may still know the address (it is the owner's own).
+    if (own.length === 1) return { kind: 'result', hit: own[0], fromList: null, q }
+    return { kind: 'error', message: outcome.type === 'code' ? t.find.notFoundCode : fmt(t.find.notFoundAddress, { q }) }
+  }
+  return outcome.hits.length === 1 ? { kind: 'result', hit: outcome.hits[0], fromList: null, q } : { kind: 'list', hits: outcome.hits, q }
 }
 
 export default function FindFlow({ initialCode }: { initialCode?: string }) {
   const { t } = useI18n()
   const [query, setQuery] = useState(initialCode ?? '')
   const [view, setView] = useState<View>(initialCode ? { kind: 'loading' } : { kind: 'idle' })
+  const [recent, setRecent] = useState<Recent[]>([])
 
-  // Deep link (?code=...): look it up once on arrival.
+  const open = useCallback(
+    (hit: Hit, q: string) => {
+      // "Recently opened" stays on this phone: only a label, a place and the text that found it.
+      addRecent({ q, label: hitTitle(hit, t.card), sub: [hit.quarter, hit.city].filter(Boolean).join(' · '), lat: hit.lat, lng: hit.lng })
+      setRecent(readRecent())
+    },
+    [t]
+  )
+
+  const search = useCallback(
+    async (raw: string) => {
+      setView({ kind: 'loading' })
+      const next = await run(raw, t)
+      if (next.kind === 'result') open(next.hit, next.q)
+      setView(next)
+    },
+    [t, open]
+  )
+
   useEffect(() => {
-    if (!initialCode) return
     let cancelled = false
-    lookup(initialCode, t).then((next) => {
-      if (!cancelled) setView(next)
+    Promise.resolve().then(() => {
+      if (!cancelled) setRecent(readRecent())
     })
     return () => {
       cancelled = true
     }
-  }, [initialCode, t])
+  }, [])
 
-  async function search() {
-    setView({ kind: 'loading' })
-    setView(await lookup(query, t))
-  }
+  // Deep link (?q=... from the home box, ?code=... from a shared message): look it up once on arrival.
+  useEffect(() => {
+    if (!initialCode) return
+    let cancelled = false
+    run(initialCode, t).then((next) => {
+      if (cancelled) return
+      if (next.kind === 'result') open(next.hit, next.q)
+      setView(next)
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [initialCode, t, open])
 
   const loading = view.kind === 'loading'
 
   return (
     <div>
-      <h1 className="text-2xl font-bold leading-snug">{t.find.title}</h1>
+      <h1 className="text-2xl font-extrabold leading-snug">{t.find.title}</h1>
 
       <form
         noValidate
-        className="mt-5 space-y-3"
+        className="mt-4 space-y-3"
         onSubmit={(event) => {
           event.preventDefault()
-          if (!loading) search()
+          if (!loading) search(query)
         }}
       >
         <div>
-          <label htmlFor="q" className="mb-1 block text-base font-semibold text-gray-900">{t.find.label}</label>
-          <p id="q-hint" className="mb-2 text-base text-gray-700">{t.find.hint}</p>
+          <label htmlFor="q" className="mb-1 block text-base font-bold">{t.find.label}</label>
           <input
             id="q"
             type="text"
             inputMode="text"
-            autoCapitalize="characters"
             autoComplete="off"
             autoCorrect="off"
             spellCheck={false}
@@ -102,6 +117,7 @@ export default function FindFlow({ initialCode }: { initialCode?: string }) {
             aria-describedby="q-hint"
             className={inputClass(view.kind === 'error')}
           />
+          <p id="q-hint" className="mt-1 text-base text-muted">{t.find.hint}</p>
         </div>
         <button type="submit" disabled={loading} className={primaryButton}>
           <SearchIcon className="h-6 w-6" />
@@ -111,68 +127,82 @@ export default function FindFlow({ initialCode }: { initialCode?: string }) {
 
       <div aria-live="polite" className="mt-5">
         {view.kind === 'error' && (
-          <p role="alert" className="rounded-lg border border-red-700 bg-red-50 p-3 text-base font-medium text-red-700">
+          <p role="alert" className="rounded-2xl border-2 border-danger bg-white p-3 text-base font-bold text-danger">
             {view.message}
           </p>
         )}
 
         {view.kind === 'list' && (
           <section aria-labelledby="results-title">
-            <h2 id="results-title" className="mb-2 text-base font-semibold text-gray-900">{t.find.results}</h2>
+            <h2 id="results-title" className="mb-2 text-lg font-extrabold">{fmt(t.find.several, { k: view.hits.length, q: view.q })}</h2>
             <ul className="space-y-2">
-              {view.places.map((place) => (
-                <li key={place.code}>
+              {view.hits.map((hit) => (
+                <li key={hit.key}>
                   <button
                     type="button"
-                    onClick={() => setView({ kind: 'place', place })}
-                    className="block min-h-14 w-full rounded-xl border-2 border-gray-300 bg-white px-4 py-3 text-left hover:border-green-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-green-700"
+                    onClick={() => {
+                      open(hit, view.q)
+                      setView({ kind: 'result', hit, fromList: view.hits, q: view.q })
+                    }}
+                    className="flex min-h-16 w-full items-center gap-3 rounded-[18px] bg-white py-3 pl-3 pr-2.5 text-left shadow-warm1 focus-visible:outline focus-visible:outline-[3px] focus-visible:outline-offset-2 focus-visible:outline-clay"
                   >
-                    <span className="block break-words text-base font-semibold text-gray-900">{place.name}</span>
-                    <span className="block break-words text-base text-gray-700">
-                      {addressLine(place, t.card)}
+                    {hit.number != null && <span className="plate-no flex-none">{hit.number}{hit.suffix}</span>}
+                    <span className="min-w-0 flex-1">
+                      <span className="block break-words text-[17px] font-bold leading-snug">{hit.street?.name ? fmt(t.card.street, { n: '', name: hit.street.name }).trim() : hitTitle(hit, t.card)}</span>
+                      {hit.formerName && <span className="block break-words text-[15px] font-bold text-clay-700">{fmt(t.find.formerName, { name: hit.formerName })}</span>}
+                      <span className="block break-words text-[15px] text-muted">{hit.legacyTitle ? hit.city : [hit.place?.name, hit.quarter, hit.city].filter(Boolean).join(' · ')}</span>
                     </span>
+                    <ChevronIcon className="h-5 w-5 flex-none text-muted" />
                   </button>
-                </li>
-              ))}
-              {view.matches.map((match) => (
-                <li key={match.id}>
-                  <MatchRow match={match} />
                 </li>
               ))}
             </ul>
           </section>
         )}
 
-        {view.kind === 'place' && (
-          <section className="space-y-4">
-            {view.place.isOwner && (
-              <p className="text-base font-semibold text-green-800">{t.find.owner}</p>
-            )}
-            <PlaceCard place={view.place} t={t} />
-            <PlaceActions place={view.place} t={t} lead="navigate" />
+        {view.kind === 'result' && (
+          <FindResult key={view.hit.key} hit={view.hit} t={t} onBack={view.fromList ? () => setView({ kind: 'list', hits: view.fromList as Hit[], q: view.q }) : undefined} />
+        )}
+
+        {(view.kind === 'idle' || view.kind === 'error') && recent.length > 0 && (
+          <section aria-labelledby="recent-title" className="mt-6">
+            <div className="flex items-center justify-between gap-2">
+              <h2 id="recent-title" className="text-lg font-extrabold">{t.find.recentTitle}</h2>
+              <button
+                type="button"
+                onClick={() => {
+                  clearRecent()
+                  setRecent([])
+                }}
+                className={linkButton}
+              >
+                {t.find.recentClear}
+              </button>
+            </div>
+            <p className="text-base text-muted">{t.find.recentNote}</p>
+            <ul className="mt-2 space-y-2">
+              {recent.map((item) => (
+                <li key={`${item.label}:${item.lat}:${item.lng}`}>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setQuery(item.q)
+                      search(item.q)
+                    }}
+                    className="flex min-h-14 w-full items-center gap-3 rounded-[18px] bg-white px-3.5 py-2.5 text-left shadow-warm1 focus-visible:outline focus-visible:outline-[3px] focus-visible:outline-offset-2 focus-visible:outline-clay"
+                  >
+                    <span className="min-w-0 flex-1">
+                      <span className="block break-words text-[17px] font-bold leading-snug">{item.label}</span>
+                      {item.sub && <span className="block break-words text-[15px] text-muted">{item.sub}</span>}
+                    </span>
+                    <ChevronIcon className="h-5 w-5 flex-none text-muted" />
+                  </button>
+                </li>
+              ))}
+            </ul>
           </section>
         )}
       </div>
-    </div>
-  )
-}
-
-// A found address: label and city, with "Y aller" right on the row.
-function MatchRow({ match }: { match: Match }) {
-  const { t } = useI18n()
-  const [open, setOpen] = useState(false)
-  const close = useCallback(() => setOpen(false), [])
-  return (
-    <div className="flex items-center gap-3 rounded-xl border-2 border-gray-300 bg-white px-4 py-3">
-      <span className="min-w-0 flex-1">
-        <span className="block break-words text-base font-semibold text-gray-900">{match.title}</span>
-        {match.city && <span className="block break-words text-base capitalize text-gray-700">{match.city}</span>}
-      </span>
-      <button type="button" onClick={() => setOpen(true)} className={`${secondaryButton} !w-auto !min-h-12 flex-none !px-4`}>
-        <NavigateIcon className="h-5 w-5" />
-        {t.go.title}
-      </button>
-      <GoSheet lat={match.lat} lng={match.lng} label={match.title} open={open} onClose={close} />
     </div>
   )
 }

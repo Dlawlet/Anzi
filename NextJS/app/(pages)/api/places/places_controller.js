@@ -4,6 +4,7 @@ import AddressLabel from "../../../../models/addressLabelModel.js";
 import Place from "../../../../models/placeModel.js";
 import Street from "../../../../models/streetModel.js";
 import { DEVICE_COOKIE, deviceCookieOptions, newDeviceToken, verifyDeviceToken } from "../../../../utils/deviceToken.js";
+import { formatManageKey, generateManageKey, hashManageKey, normalizeManageKey } from "../../../../utils/manageKey.js";
 import { generateCode, normalizeCode } from "../../../../utils/placeCode.js";
 import { CONSENT_VERSION, publicPlace, publicStreet, validateNewPlace, validatePlacePatch } from "../../../../utils/placeValidation.js";
 import { allow, clientIp, hashIp, sameOrigin } from "../../../../utils/rateLimit.js";
@@ -161,6 +162,8 @@ export const createPlace = async (req) => {
             numbering = { numberStatus: "waiting" };
         }
 
+        // Shown once in the response; only its hash is stored.
+        const manageKey = generateManageKey();
         let place = null;
         try {
             for (let attempt = 0; attempt < 5 && !place; attempt++) {
@@ -186,6 +189,7 @@ export const createPlace = async (req) => {
                         adultOrParentOk: true,
                         status: "live",
                         ownerId: deviceId,
+                        manageKeyHash: hashManageKey(manageKey),
                     });
                 } catch (error) {
                     if (error?.code !== 11000) throw error;
@@ -199,7 +203,7 @@ export const createPlace = async (req) => {
 
         if (street) await countPlace(street);
 
-        const response = json({ ...publicPlace(place, street), isOwner: true }, 201);
+        const response = json({ ...publicPlace(place, street), isOwner: true, manageKey: formatManageKey(manageKey) }, 201);
         if (newToken) response.cookies.set(DEVICE_COOKIE, newToken, deviceCookieOptions());
         return response;
     } catch (error) {
@@ -301,6 +305,35 @@ export const updatePlace = async (req, rawCode) => {
         return json({ ...publicPlace(place, streets.get(String(place.streetId))), isOwner: true }, 200);
     } catch (error) {
         if (error?.name === "ValidationError") return json({ error: "Invalid data" }, 400);
+        return serverError(error);
+    }
+};
+
+// POST /api/places/claim { key } : the management key hands the address to this device (another phone, another
+// browser, cleared data). No code is needed: the key alone finds the place. A wrong key and an unknown one answer
+// the same 404; guessing a 61-bit key is stopped by the per-caller limit.
+export const claimPlace = async (req) => {
+    try {
+        const blocked = await guardWrite(req, "claim-ip", 20);
+        if (blocked) return blocked;
+
+        const body = await readBody(req);
+        const key = normalizeManageKey(body?.key);
+        if (!key) return json({ error: "Invalid data", fields: ["key"] }, 400);
+
+        const place = await Place.findOne({ manageKeyHash: hashManageKey(key), status: { $ne: "hidden" } });
+        if (!place) return json({ error: "Not found" }, 404);
+
+        let deviceId = deviceIdFrom(req);
+        let newToken = null;
+        if (!deviceId) ({ id: deviceId, token: newToken } = newDeviceToken());
+        await Place.updateOne({ _id: place._id }, { $set: { ownerId: deviceId } });
+
+        const streets = await streetsById([place]);
+        const response = json({ ...publicPlace(place, streets.get(String(place.streetId))), isOwner: true }, 200);
+        if (newToken) response.cookies.set(DEVICE_COOKIE, newToken, deviceCookieOptions());
+        return response;
+    } catch (error) {
         return serverError(error);
     }
 };

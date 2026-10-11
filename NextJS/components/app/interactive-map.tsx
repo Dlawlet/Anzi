@@ -6,6 +6,38 @@ import 'mapbox-gl/dist/mapbox-gl.css'
 import type { HomeStreet, HomeTag } from '@/utils/homeMap'
 import type { LngLat } from '@/utils/staticMap'
 
+// A searched address: the map recentres on it and a teardrop pin with the house number marks it.
+export type MapPinTarget = { lng: number; lat: number; number: string }
+
+// A Mapbox marker made of plain DOM: the number is set as text, never as HTML.
+function pinElement(number: string) {
+  const el = document.createElement('div')
+  el.style.cssText = 'width:50px;height:66px;pointer-events:none'
+  const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg')
+  svg.setAttribute('viewBox', '0 0 50 66')
+  svg.setAttribute('width', '50')
+  svg.setAttribute('height', '66')
+  const body = document.createElementNS('http://www.w3.org/2000/svg', 'path')
+  body.setAttribute('d', 'M25 64C25 64 4 40 4 24a21 21 0 0 1 42 0c0 16-21 40-21 40z')
+  body.setAttribute('fill', '#42210B')
+  const disc = document.createElementNS('http://www.w3.org/2000/svg', 'circle')
+  disc.setAttribute('cx', '25')
+  disc.setAttribute('cy', '24')
+  disc.setAttribute('r', '15')
+  disc.setAttribute('fill', '#FFF3E3')
+  const label = document.createElementNS('http://www.w3.org/2000/svg', 'text')
+  label.setAttribute('x', '25')
+  label.setAttribute('y', '30')
+  label.setAttribute('text-anchor', 'middle')
+  label.setAttribute('font-size', number.length > 3 ? '12' : '17')
+  label.setAttribute('font-weight', '800')
+  label.setAttribute('fill', '#42210B')
+  label.textContent = number
+  svg.append(body, disc, label)
+  el.append(svg)
+  return el
+}
+
 // The only importer of mapbox-gl on Home. It is loaded with next/dynamic after the user taps "Agrandir",
 // so first load carries none of it. Same centre and zoom as the static image: no jump when it opens.
 export default function InteractiveMap({
@@ -14,6 +46,7 @@ export default function InteractiveMap({
   streets,
   tags,
   label,
+  pin,
   onFail,
 }: {
   center: LngLat
@@ -21,9 +54,13 @@ export default function InteractiveMap({
   streets: HomeStreet[]
   tags: HomeTag[]
   label: string
+  pin?: MapPinTarget | null
   onFail: () => void
 }) {
   const container = useRef<HTMLDivElement>(null)
+  const mapRef = useRef<mapboxgl.Map | null>(null)
+  const markerRef = useRef<mapboxgl.Marker | null>(null)
+  const firstPin = useRef(pin)
 
   useEffect(() => {
     if (!container.current) return
@@ -35,7 +72,13 @@ export default function InteractiveMap({
       onFail() // no WebGL, or no token
       return
     }
+    mapRef.current = map
     map.addControl(new mapboxgl.NavigationControl({ showCompass: false }), 'top-right')
+    // The pin the map opens with (a find result); later searches move it from the effect below.
+    if (firstPin.current) {
+      const first = firstPin.current
+      markerRef.current = new mapboxgl.Marker({ element: pinElement(first.number), anchor: 'bottom' }).setLngLat([first.lng, first.lat]).addTo(map)
+    }
     map.on('error', (event) => {
       // A failed style or token means a blank map: say so instead of leaving a grey box.
       if (!map.isStyleLoaded()) {
@@ -83,10 +126,24 @@ export default function InteractiveMap({
       })
     })
 
-    return () => map.remove()
+    return () => {
+      markerRef.current?.remove()
+      markerRef.current = null
+      mapRef.current = null
+      map.remove()
+    }
     // The map is created once per opening; props are the first view.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
+
+  // A new search result: move the pin and recentre the map on it.
+  useEffect(() => {
+    const map = mapRef.current
+    if (!map || !pin || pin === firstPin.current) return
+    markerRef.current?.remove()
+    markerRef.current = new mapboxgl.Marker({ element: pinElement(pin.number), anchor: 'bottom' }).setLngLat([pin.lng, pin.lat]).addTo(map)
+    map.flyTo({ center: [pin.lng, pin.lat], zoom: Math.max(map.getZoom(), 17), essential: true })
+  }, [pin])
 
   return <div ref={container} role="region" aria-label={label} className="h-full w-full" />
 }

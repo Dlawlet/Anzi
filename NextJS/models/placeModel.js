@@ -33,6 +33,9 @@ const placeSchema = new Schema(
     adultOrParentOk: { type: Boolean, required: true },
     status: { type: String, required: true, enum: ["live", "pending", "hidden"] },
     ownerId: { type: String, required: true, index: true },
+    // SHA-256 of the management key shown once at creation (utils/manageKey.js); it finds the place on "claim".
+    // Never returned, never selected by default.
+    manageKeyHash: { type: String, select: false, index: { unique: true, sparse: true } },
   },
   { timestamps: true }
 );

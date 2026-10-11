@@ -5,18 +5,22 @@ import type { Dict } from '@/i18n/dictionary'
 import type { PlaceView } from '@/types/place'
 import AddressPlate from './address-plate'
 import Logo from './logo'
+import ManageKeyBox from './manage-key-box'
 import PlaceActions from './place-actions'
+import SaveCardButton from './save-card-button'
 import { CategoryIcon } from './icons'
+import { addressLine } from '@/utils/share'
 
 // Success screen: dark, with the address card (logo, orange plate, quarter and city, landmark). The card never shows
 // the Anzi code, a site URL or a QR (CLAUDE.md); the code only travels inside the WhatsApp text for now.
 export default function CreateDone(props: {
   place: PlaceView
+  manageKey: string
   t: Dict
   headingRef: React.RefObject<HTMLHeadingElement | null>
   onAnother: () => void
 }) {
-  const { place, t, headingRef, onAnother } = props
+  const { place, manageKey, t, headingRef, onAnother } = props
   const d = t.create.done
   const number = place.houseNumber != null ? `${place.houseNumber}${place.houseSuffix}` : null
   const streetName = place.street?.name || d.unnamedStreet
@@ -64,9 +68,11 @@ export default function CreateDone(props: {
       </article>
 
       <p className="mt-5 text-base text-night-300">{d.next}</p>
-      <div className="mt-4">
+      <div className="mt-4 flex flex-col gap-2">
         <PlaceActions place={place} t={t} lead="share" whatsappTone="leaf" />
+        <SaveCardButton place={place} t={t} className="btn bg-white text-night-900" />
       </div>
+      {manageKey && <ManageKeyBox manageKey={manageKey} address={addressLine(place, t.card) || place.name} t={t} />}
       <p className="mt-3 text-center text-base text-night-300">{t.visibility.short[place.visibility]}. {d.savedOnDevice}</p>
 
       <div className="mt-3 flex flex-wrap justify-center gap-x-4">

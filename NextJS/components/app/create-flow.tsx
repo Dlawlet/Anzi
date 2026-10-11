@@ -104,7 +104,8 @@ export default function CreateFlow() {
   const [errors, setErrors] = useState<Errors>({})
   const [submitting, setSubmitting] = useState(false)
   const [submitError, setSubmitError] = useState('')
-  const [created, setCreated] = useState<PlaceView | null>(null)
+  // The management key is kept in memory only: it is shown once and never written to browser storage.
+  const [created, setCreated] = useState<{ place: PlaceView; manageKey: string } | null>(null)
 
   // Street step state: the streets around the pin, the chosen one, and the naming of a new street.
   const [streets, setStreets] = useState<StreetsState>({ phase: 'idle' })
@@ -287,9 +288,9 @@ export default function CreateFlow() {
         }),
       })
       if (res.status === 201) {
-        const place = (await res.json()) as PlaceView
+        const { manageKey, ...place } = (await res.json()) as PlaceView & { manageKey?: string }
         saveLocalPlace(place)
-        setCreated(place)
+        setCreated({ place, manageKey: manageKey ?? '' })
       } else if (res.status === 400) {
         const body = (await res.json().catch(() => ({}))) as { fields?: string[] }
         const fields = Array.isArray(body.fields) ? body.fields : []
@@ -357,7 +358,7 @@ export default function CreateFlow() {
     setStep('where')
   }
 
-  if (created) return <CreateDone place={created} t={t} headingRef={heading} onAnother={startAnother} />
+  if (created) return <CreateDone place={created.place} manageKey={created.manageKey} t={t} headingRef={heading} onAnother={startAnother} />
 
   const stepNumber = STEPS.indexOf(step) + 1
   const titles: Record<Step, string> = {

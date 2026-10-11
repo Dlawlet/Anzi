@@ -6,17 +6,19 @@ const m = vi.hoisted(() => ({
   find: vi.fn(),
   findOneAndUpdate: vi.fn(),
   findOneAndDelete: vi.fn(),
+  updateOne: vi.fn(),
   rl: vi.fn(),
 }));
 
 vi.mock("../../../../models/placeModel.js", () => ({
-  default: { create: m.create, findOne: m.findOne, find: m.find, findOneAndUpdate: m.findOneAndUpdate, findOneAndDelete: m.findOneAndDelete },
+  default: { create: m.create, findOne: m.findOne, find: m.find, findOneAndUpdate: m.findOneAndUpdate, findOneAndDelete: m.findOneAndDelete, updateOne: m.updateOne },
 }));
 vi.mock("../../../../models/rateLimitModel.js", () => ({ default: { findOneAndUpdate: m.rl } }));
 
 import { escapeRegex } from "../../../../utils/validate.js";
 import { DEVICE_COOKIE, newDeviceToken } from "../../../../utils/deviceToken.js";
-import { createPlace, deletePlace, getPlaceByCode, listPlaces, updatePlace } from "./places_controller.js";
+import { generateManageKey, hashManageKey } from "../../../../utils/manageKey.js";
+import { claimPlace, createPlace, deletePlace, getPlaceByCode, listPlaces, updatePlace } from "./places_controller.js";
 
 const body = {
   lng: 11.5167, lat: 3.8667, name: "Chez Mama Julie", category: "home", city: "Yaoundé", region: "Centre",
@@ -57,6 +59,10 @@ describe("createPlace", () => {
     const out = await res.json();
     expect(out).not.toHaveProperty("ownerId");
     expect(out.isOwner).toBe(true);
+    // The management key is shown once; only its hash is stored.
+    expect(out.manageKey).toMatch(/^[2-9A-HJKMNP-Z]{4}-[2-9A-HJKMNP-Z]{4}-[2-9A-HJKMNP-Z]{4}$/);
+    expect(doc.manageKeyHash).toBe(hashManageKey(out.manageKey.replaceAll("-", "")));
+    expect(JSON.stringify(doc)).not.toContain(out.manageKey.replaceAll("-", ""));
   });
 
   it("reuses a valid device cookie instead of minting a new one", async () => {
@@ -184,5 +190,46 @@ describe("updatePlace and deletePlace", () => {
     const { token } = newDeviceToken();
     m.findOneAndDelete.mockResolvedValue(stored());
     expect((await deletePlace(makeReq({ cookie: token }), "YDE-7K4M")).status).toBe(200);
+  });
+});
+
+describe("claimPlace", () => {
+  const key = generateManageKey();
+  const typed = `${key.slice(0, 4)}-${key.slice(4, 8)} ${key.slice(8).toLowerCase()}`;
+
+  it("hands the place to this device when the key is right", async () => {
+    m.findOne.mockResolvedValue(stored({ _id: "p1" }));
+    const res = await claimPlace(makeReq({ json: { key: typed } }));
+    expect(res.status).toBe(200);
+    expect(m.findOne.mock.calls[0][0]).toMatchObject({ manageKeyHash: hashManageKey(key) });
+    const body = await res.json();
+    expect(body).toMatchObject({ code: "YDE-7K4M", isOwner: true });
+    expect(body).not.toHaveProperty("manageKeyHash");
+    expect(m.updateOne).toHaveBeenCalledWith({ _id: "p1" }, { $set: { ownerId: expect.any(String) } });
+    expect(res.cookies.get(DEVICE_COOKIE)?.value).toBeTruthy();
+  });
+
+  it("keeps the device the caller already has", async () => {
+    m.findOne.mockResolvedValue(stored({ _id: "p1" }));
+    const { id, token } = newDeviceToken();
+    const res = await claimPlace(makeReq({ json: { key }, cookie: token }));
+    expect(res.status).toBe(200);
+    expect(m.updateOne).toHaveBeenCalledWith({ _id: "p1" }, { $set: { ownerId: id } });
+    expect(res.cookies.get(DEVICE_COOKIE)).toBeUndefined();
+  });
+
+  it("answers 404 for an unknown key and changes nothing", async () => {
+    m.findOne.mockResolvedValue(null);
+    expect((await claimPlace(makeReq({ json: { key } }))).status).toBe(404);
+    expect(m.updateOne).not.toHaveBeenCalled();
+  });
+
+  it("rejects a malformed key, cross-site calls and too many tries", async () => {
+    expect((await claimPlace(makeReq({ json: { key: "short" } }))).status).toBe(400);
+    expect((await claimPlace(makeReq())).status).toBe(400);
+    expect((await claimPlace(makeReq({ json: { key }, headers: { origin: "https://evil.example" } }))).status).toBe(403);
+    m.rl.mockResolvedValue({ count: 21 });
+    expect((await claimPlace(makeReq({ json: { key } }))).status).toBe(429);
+    expect(m.findOne).not.toHaveBeenCalled();
   });
 });
