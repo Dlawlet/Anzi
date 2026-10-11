@@ -159,6 +159,13 @@ export const fr = {
     removeLocal: 'Retirer de ce téléphone',
     error: 'Ça n’a pas marché. Vérifiez votre connexion et réessayez.',
   },
+  home: {
+    tagline: 'Soyez trouvé facilement, sans explications au téléphone.',
+    createHint: 'Gratuit. Moins d’une minute.',
+    findTitle: 'Trouver une adresse',
+    myTitle: 'Mes adresses',
+    seeAll: 'Tout voir',
+  },
   card: {
     code: 'Code Anzi',
     landmark: 'Repère',
@@ -331,6 +338,13 @@ export const en: Dict = {
     cancel: 'Cancel',
     removeLocal: 'Remove from this phone',
     error: 'That did not work. Check your connection and try again.',
+  },
+  home: {
+    tagline: 'Be found easily, without long explanations on the phone.',
+    createHint: 'Free. Less than a minute.',
+    findTitle: 'Find an address',
+    myTitle: 'My addresses',
+    seeAll: 'See all',
   },
   card: {
     code: 'Anzi code',

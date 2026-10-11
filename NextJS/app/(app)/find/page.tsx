@@ -7,9 +7,10 @@ export async function generateMetadata(): Promise<Metadata> {
   return { title: `${t.find.title} - ${t.brand}`, description: t.meta.description }
 }
 
-export default async function FindPage({ searchParams }: { searchParams: Promise<{ code?: string | string[] }> }) {
-  const { code } = await searchParams
-  // Only a short plain string is accepted as a deep-linked code; the API validates it again.
-  const initialCode = typeof code === 'string' && code.length <= 20 ? code : undefined
-  return <FindFlow initialCode={initialCode} />
+export default async function FindPage({ searchParams }: { searchParams: Promise<{ q?: string | string[]; code?: string | string[] }> }) {
+  const { q, code } = await searchParams
+  // `q` comes from the home search box, `code` from shared links. Only a short plain string is accepted; the API validates it again.
+  const raw = typeof q === 'string' ? q : code
+  const initialQuery = typeof raw === 'string' && raw.trim() && raw.length <= 80 ? raw : undefined
+  return <FindFlow initialCode={initialQuery} />
 }

@@ -12,6 +12,7 @@ Anzi: Next.js app where users view a map of addresses (Mapbox), and submit new a
 - Removed: auth pages, testimonials, blocks, newsletter and `/api/mailing` (+ model), directions plugin, unused images and video, dead PUT/DELETE stubs. Landing (hero, features, zigzag, footer) and the three form pages remain until Phase 1.
 - Phase 1 slice 1 done: `Place` model + `/api/places` (POST create, GET `?mine=1` / `?search=`, `[code]` GET/PATCH/DELETE). Device-token cookie (HMAC, `DEVICE_TOKEN_SECRET`), Mongo-backed rate limits (no new service), link-only by default, consent stored, same-origin check on writes. Legacy `PUT`/`DELETE` `/api/address` removed (open writes, no caller).
 - Phase 1 slice 2 done (UI, 3 commits): route group `app/(app)` (light, mobile-first shell with bottom nav and FR/EN toggle) with `/create` (GPS with accuracy, name/category, city/region/landmark, consent + 18+ check, address card, WhatsApp/Google Maps/copy), `/find` (code lookup or public name search, `?code=` deep link) and `/mine` (server list + local offline copy, visibility change, delete). i18n: `i18n/dictionary.ts` (fr default, en), language in cookie `anzi_lang`, else Accept-Language. Share text and card never show a URL; `NEXT_PUBLIC_SITE_URL` is read only in `utils/site.ts` and `*.vercel.app` is refused. The old dark header moved from the root layout into `components/legacy-shell.tsx` (used by `(default)` and `(pages)`). 54 tests, lint, tsc, build pass; pages smoke-tested over HTTP (200, French default, English via Accept-Language), but **never exercised in a real browser or against a real DB** (GPS, clipboard, WhatsApp link, cookie flow untested).
+- New home at `/` (`app/(app)/page.tsx`): create button, GET search form to `/find?q=`, this phone's addresses. The old landing (`(default)` group, hero, features, zigzag, modal-video, page-illustration) is deleted, which also removes the Mega.nz iframe; `frame-src https://mega.nz` in the CSP and the `aos` dependency are now unused (left for you to approve). Header links on legacy pages still point to the old forms.
 - CI: `.github/workflows/ci.yml` (lint, tsc, test, build on Node 22).
 
 ## Next steps
@@ -39,7 +40,6 @@ Anzi: Next.js app where users view a map of addresses (Mapbox), and submit new a
 - `Address.createIndexes(...)` is still called per request, unawaited (legacy model, to be replaced).
 - Two tracked lockfiles (`yarn.lock` stale, `package-lock.json` real). `map.tsx` still uses `window.location.href` (1 lint warning).
 - `NextJS/README.md` and `CHANGELOG.md` are the unmodified Cruip template. Root `notes` and `perspective` are scratch files.
-- Hero modal still embeds a Mega.nz iframe.
 
 ## Architecture map
 - `NextJS/app/(pages)/api/<name>/route.ts` + `<name>_controller.js` → HTTP handlers and logic
