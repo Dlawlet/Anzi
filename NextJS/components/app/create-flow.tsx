@@ -47,7 +47,7 @@ const CATEGORY_EMOJI: Record<string, string> = {
 // Server field name -> the step that owns it.
 const FIELD_STEP: Record<string, Step> = {
   location: 'where', name: 'what', category: 'what', city: 'details', region: 'details', landmark: 'details',
-  quarter: 'details', houseNumber: 'details', visibility: 'consent', consent: 'consent', adultOrParentOk: 'consent',
+  quarter: 'details', officialNumber: 'details', houseNumber: 'details', visibility: 'consent', consent: 'consent', adultOrParentOk: 'consent',
 }
 
 function FieldShell(props: {
@@ -84,7 +84,7 @@ function fieldMessage(t: Dict, field: string): string {
     case 'region': return t.create.details.regionError
     case 'landmark':
     case 'quarter':
-    case 'houseNumber': return t.create.details.tooLong
+    case 'officialNumber': return t.create.details.tooLong
     case 'consent': return t.create.consent.agreeError
     case 'adultOrParentOk': return t.create.consent.adultError
     default: return t.create.errors.invalid
@@ -183,7 +183,7 @@ export default function CreateFlow() {
           city: form.city,
           region: form.region,
           quarter: form.quarter,
-          houseNumber: form.houseNumber,
+          officialNumber: form.houseNumber,
           landmark: form.landmark,
           visibility: form.visibility,
           consent: form.consent,

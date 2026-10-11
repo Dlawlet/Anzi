@@ -8,10 +8,12 @@ import { addressLine, buildShareText, mapsNavigateUrl, mapsViewUrl, whatsappUrl 
 import { publicSiteUrl } from "./site";
 
 const place = {
-  code: "YDE-7K4M", name: "Chez Mama Julie", houseNumber: "12", quarter: "Bastos", city: "Yaoundé",
+  code: "YDE-7K4M", name: "Chez Mama Julie", street: { name: "Manguier" }, houseNumber: 12, houseSuffix: "", officialNumber: "",
+  quarter: "Bastos", city: "Yaoundé",
   landmark: "Behind the pharmacy, yellow gate", lat: 3.866712, lng: 11.516734,
 };
-const labels = { code: "Code Anzi", landmark: "Repère", houseNo: "N° {n}" };
+const tpl = { street: "{n} Rue {name}", unnamed: "{n}, rue sans nom", houseNo: "N° {n}" };
+const labels = { code: "Code Anzi", landmark: "Repère", ...tpl };
 
 describe("share links", () => {
   it("builds key-less Google Maps links", () => {
@@ -25,15 +27,18 @@ describe("share links", () => {
     expect(url).toBe("https://wa.me/?text=a%20b%0Ac%26d");
   });
   it("joins the address parts and skips empty ones", () => {
-    expect(addressLine(place, "N° {n}")).toBe("N° 12, Bastos, Yaoundé");
-    expect(addressLine({ houseNumber: "", quarter: "", city: "Douala" }, "N° {n}")).toBe("Douala");
+    expect(addressLine(place, tpl)).toBe("12 Rue Manguier, Bastos, Yaoundé");
+    expect(addressLine({ ...place, houseSuffix: "A" }, tpl)).toBe("12A Rue Manguier, Bastos, Yaoundé");
+    expect(addressLine({ ...place, street: { name: "" } }, tpl)).toBe("12, rue sans nom, Bastos, Yaoundé");
+    expect(addressLine({ ...place, street: null, houseNumber: null, officialNumber: "7" }, tpl)).toBe("N° 7, Bastos, Yaoundé");
+    expect(addressLine({ street: null, houseNumber: null, houseSuffix: "", officialNumber: "", quarter: "", city: "Douala" }, tpl)).toBe("Douala");
   });
   it("leads with name, code and landmark and ends with the maps link", () => {
     const text = buildShareText(place, labels, null);
     expect(text.split("\n")).toEqual([
       "Chez Mama Julie",
       "Code Anzi: YDE-7K4M",
-      "N° 12, Bastos, Yaoundé",
+      "12 Rue Manguier, Bastos, Yaoundé",
       "Repère: Behind the pharmacy, yellow gate",
       "https://www.google.com/maps/search/?api=1&query=3.866712,11.516734",
     ]);

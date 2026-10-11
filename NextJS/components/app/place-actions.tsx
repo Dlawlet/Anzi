@@ -14,7 +14,7 @@ export default function PlaceActions({ place, t, lead }: { place: PlaceView; t: 
 
   const shareText = buildShareText(
     place,
-    { code: t.share.code, landmark: t.share.landmark, houseNo: t.card.houseNo },
+    { code: t.share.code, landmark: t.share.landmark, street: t.card.street, unnamed: t.card.unnamed, houseNo: t.card.houseNo },
     SITE_URL
   )
 

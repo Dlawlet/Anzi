@@ -5,6 +5,8 @@ export const REGIONS = [
   "Adamaoua", "Centre", "Est", "Extreme-Nord", "Littoral",
   "Nord", "Nord-Ouest", "Ouest", "Sud", "Sud-Ouest",
 ];
+// Set by the server only (street addressing); sending any of them is a 400.
+const SERVER_OWNED = ["houseNumber", "houseSuffix", "numberStatus", "streetId"];
 // Cameroon bounding box plus a margin.
 export const BOUNDS = { lng: [7.5, 17], lat: [1, 14] };
 
@@ -34,8 +36,11 @@ export function validateNewPlace(body) {
   if (landmark === null) errors.push("landmark");
   const quarter = body.quarter == null || body.quarter === "" ? "" : clean(body.quarter, 60);
   if (quarter === null) errors.push("quarter");
-  const houseNumber = body.houseNumber == null || body.houseNumber === "" ? "" : clean(body.houseNumber, 20);
-  if (houseNumber === null) errors.push("houseNumber");
+  const officialNumber = body.officialNumber == null || body.officialNumber === "" ? "" : clean(body.officialNumber, 20);
+  if (officialNumber === null) errors.push("officialNumber");
+  // The number is issued by the server from the street line; a client that sends one gets a 400.
+  for (const key of SERVER_OWNED) if (key in body) errors.push(key);
+  if (body.pinAdjusted != null && typeof body.pinAdjusted !== "boolean") errors.push("pinAdjusted");
 
   if (!CATEGORIES.includes(body.category)) errors.push("category");
   if (!REGIONS.includes(body.region)) errors.push("region");
@@ -54,7 +59,7 @@ export function validateNewPlace(body) {
   if (errors.length > 0) return { errors };
   return {
     errors,
-    value: { name, city, landmark, quarter, houseNumber, category: body.category, region: body.region, visibility, accuracyM, lng, lat },
+    value: { name, city, landmark, quarter, officialNumber, pinAdjusted: body.pinAdjusted === true, category: body.category, region: body.region, visibility, accuracyM, lng, lat },
   };
 }
 
@@ -72,21 +77,41 @@ export function validatePlacePatch(body) {
   text("name", 80, 2);
   text("landmark", 140);
   text("quarter", 60);
-  text("houseNumber", 20);
+  text("officialNumber", 20);
   if ("category" in body) CATEGORIES.includes(body.category) ? (patch.category = body.category) : errors.push("category");
   if ("visibility" in body) VISIBILITIES.includes(body.visibility) ? (patch.visibility = body.visibility) : errors.push("visibility");
   if (Object.keys(patch).length === 0 && errors.length === 0) errors.push("empty");
   return { errors, value: patch };
 }
 
-// Fields a visitor may see. No ownerId, consent data or moderation status.
-export function publicPlace(place) {
+// Street data a visitor may see. No device ids, proposals or geometry.
+export function publicStreet(street) {
+  if (!street) return null;
+  return {
+    id: String(street._id),
+    name: street.name || "",
+    lang: street.lang || "fr",
+    nameStatus: street.nameStatus,
+    nameSource: street.nameSource,
+    quarter: street.quarter || "",
+    city: street.city,
+  };
+}
+
+// Fields a visitor may see. No ownerId, consent data, moderation status or numbering audit values.
+export function publicPlace(place, street = null) {
   const [lng, lat] = place.location.coordinates;
+  const numbered = place.numberStatus === "issued" && Number.isInteger(place.houseNumber);
   return {
     code: place.code,
     name: place.name,
     category: place.category,
-    houseNumber: place.houseNumber || "",
+    street: publicStreet(street),
+    houseNumber: numbered ? place.houseNumber : null,
+    houseSuffix: numbered ? place.houseSuffix || "" : "",
+    side: numbered ? (place.houseNumber % 2 === 0 ? "even" : "odd") : null,
+    numberStatus: place.numberStatus || "none",
+    officialNumber: place.officialNumber || "",
     quarter: place.quarter || "",
     city: place.city,
     region: place.region,

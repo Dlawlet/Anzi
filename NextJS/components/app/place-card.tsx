@@ -6,7 +6,7 @@ import { fmt } from '@/i18n/lang'
 
 // The shareable address card: name, code, landmark. No site URL, no QR (CLAUDE.md). All text is rendered as text.
 export default function PlaceCard({ place, t }: { place: PlaceView; t: Dict }) {
-  const line = addressLine(place, t.card.houseNo)
+  const line = addressLine(place, t.card)
   const category = (t.categories as Record<string, string>)[place.category]
 
   return (

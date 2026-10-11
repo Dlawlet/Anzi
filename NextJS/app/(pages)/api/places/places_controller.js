@@ -1,10 +1,21 @@
+import { Types } from "mongoose";
 import { NextResponse } from "next/server";
+import AddressLabel from "../../../../models/addressLabelModel.js";
 import Place from "../../../../models/placeModel.js";
+import Street from "../../../../models/streetModel.js";
 import { DEVICE_COOKIE, deviceCookieOptions, newDeviceToken, verifyDeviceToken } from "../../../../utils/deviceToken.js";
 import { generateCode, normalizeCode } from "../../../../utils/placeCode.js";
-import { CONSENT_VERSION, publicPlace, validateNewPlace, validatePlacePatch } from "../../../../utils/placeValidation.js";
+import { CONSENT_VERSION, publicPlace, publicStreet, validateNewPlace, validatePlacePatch } from "../../../../utils/placeValidation.js";
 import { allow, clientIp, hashIp, sameOrigin } from "../../../../utils/rateLimit.js";
+import { allocateLabel, nameTakenNearby, nearbyStreets, streetsById } from "../../../../utils/streetStore.js";
+import { MAX_BEYOND_M, distanceM, idealNumber, orientTrace, project } from "../../../../utils/streetNumbering.js";
+import { validateStreetInput } from "../../../../utils/streetValidation.js";
 import { cleanSearch, escapeRegex } from "../../../../utils/validate.js";
+
+const NEARBY_STREET_M = 150; // streets considered when a new one is drawn
+const DUPLICATE_STREET_M = 25; // a new street this close to an existing line is probably the same street
+const WAITING_RADIUS_M = 200; // a place joins a street still waiting for its line only this near the anchor
+const ACCEPT_AT_PLACES = 5; // houses on a street that make its proposed name final
 
 const json = (body, status) => NextResponse.json(body, { status });
 const serverError = (error) => {
@@ -21,6 +32,8 @@ async function readBody(req) {
     }
 }
 
+const conflict = (reason, extra = {}) => json({ error: "Conflict", reason, ...extra }, 409);
+
 const deviceIdFrom = (req) => verifyDeviceToken(req.cookies.get(DEVICE_COOKIE)?.value);
 
 // Rejects cross-site writes and rate-limited callers. Returns a response, or null to continue.
@@ -28,6 +41,73 @@ async function guardWrite(req, scope, ipLimit) {
     if (!sameOrigin(req)) return json({ error: "Forbidden" }, 403);
     if (!(await allow(scope, hashIp(clientIp(req)), ipLimit, 86400))) return json({ error: "Too many requests" }, 429);
     return null;
+}
+
+// Resolves the street part of a create request: finds or creates the street and checks the geometry.
+// Returns { street, created } or { response } when the request must stop (404/409/429).
+async function resolveStreet(request, value, deviceId, req) {
+    const point = [value.lng, value.lat];
+
+    if (request.kind === "join") {
+        const street = await Street.findOne({ _id: request.streetId, status: "live" });
+        if (!street) return { response: json({ error: "Not found" }, 404) };
+        if (street.lineStatus === "waiting" && distanceM(street.geometry.coordinates, point) > WAITING_RADIUS_M) {
+            return { response: conflict("too_far_from_street") };
+        }
+        return { street, created: false };
+    }
+
+    if (!(await allow("street-create-device", deviceId, 3, 86400))) return { response: json({ error: "Too many requests" }, 429) };
+    if (!(await allow("street-create-ip", hashIp(clientIp(req)), 10, 86400))) return { response: json({ error: "Too many requests" }, 429) };
+
+    const near = await nearbyStreets(point, NEARBY_STREET_M, 8);
+    const ready = near.filter((s) => s.lineStatus === "ready");
+    let line = null;
+    if (request.line) {
+        const oriented = orientTrace(request.line, ready.map((s) => s.geometry.coordinates));
+        line = { line: oriented.line, baseSlot: oriented.baseSlot };
+        const check = idealNumber({ line: line.line, originS: 0, baseSlot: line.baseSlot, evenSide: "right" }, point);
+        if (check.error) return { response: conflict(check.error) };
+    }
+
+    if (!request.confirmNew) {
+        for (const other of near) {
+            if (isSameStreet(other, point)) return { response: conflict("street_exists_nearby", { street: publicStreet(other) }) };
+        }
+    }
+
+    if (request.name && (await nameTakenNearby(request.name, point))) return { response: conflict("name_taken_nearby") };
+
+    const street = await Street.create({
+        name: request.name,
+        nameKey: request.nameKey,
+        lang: request.name ? request.lang : undefined,
+        nameStatus: request.name ? "proposed" : "unnamed",
+        nameSource: "community",
+        proposedBy: request.name ? deviceId : undefined,
+        aliases: [],
+        geometry: line ? { type: "LineString", coordinates: line.line } : { type: "Point", coordinates: point },
+        lineStatus: line ? "ready" : "waiting",
+        lineSource: line ? "trace" : undefined,
+        originS: line ? 0 : undefined,
+        baseSlot: line ? line.baseSlot : undefined,
+        evenSide: line ? "right" : undefined,
+        lengthM: line ? request.lengthM : undefined,
+        quarter: value.quarter || undefined,
+        city: value.city,
+        region: value.region,
+        placeCount: 0,
+        firstOwnerId: deviceId,
+        status: "live",
+    });
+    return { street, created: true };
+}
+
+// Is the pin on (or right next to) this street? Then a "new street" is probably a duplicate.
+function isSameStreet(street, point) {
+    if (street.lineStatus !== "ready") return distanceM(street.geometry.coordinates, point) <= DUPLICATE_STREET_M;
+    const { s, d, lengthM } = project(street.geometry.coordinates, point);
+    return Math.abs(d) <= DUPLICATE_STREET_M && s >= -MAX_BEYOND_M && s <= lengthM + MAX_BEYOND_M;
 }
 
 export const createPlace = async (req) => {
@@ -44,37 +124,82 @@ export const createPlace = async (req) => {
 
         const body = await readBody(req);
         if (!body) return json({ error: "Invalid JSON body" }, 400);
-        const { errors, value } = validateNewPlace(body);
+        const checked = validateNewPlace(body);
+        const streetInput = checked.errors.includes("body") ? { errors: [] } : validateStreetInput(body.street);
+        const errors = [...checked.errors, ...streetInput.errors];
         if (errors.length > 0) return json({ error: "Invalid data", fields: errors }, 400);
+        const value = checked.value;
+
+        let street = null;
+        let streetCreated = false;
+        if (streetInput.value) {
+            const resolved = await resolveStreet(streetInput.value, value, deviceId, req);
+            if (resolved.response) return resolved.response;
+            ({ street, created: streetCreated } = resolved);
+        }
+
+        // Number: issued now when the street has a line, otherwise it waits for the admin to draw one.
+        const placeId = new Types.ObjectId();
+        let numbering = { numberStatus: "none" };
+        let label = null;
+        if (street && street.lineStatus === "ready") {
+            const issued = await allocateLabel(street, [value.lng, value.lat], placeId);
+            if (issued.error === "no_label") {
+                await undoCreate(null, streetCreated ? street : null);
+                return json({ error: "Could not allocate a number, try again" }, 503);
+            }
+            if (issued.error) {
+                await undoCreate(null, streetCreated ? street : null);
+                return conflict(issued.error);
+            }
+            label = issued.label;
+            numbering = {
+                numberStatus: "issued", houseNumber: issued.houseNumber, houseSuffix: issued.houseSuffix,
+                numberedAt: new Date(), alongM: issued.alongM, offsetM: issued.offsetM,
+            };
+        } else if (street) {
+            numbering = { numberStatus: "waiting" };
+        }
 
         let place = null;
-        for (let attempt = 0; attempt < 5 && !place; attempt++) {
-            try {
-                place = await Place.create({
-                    code: generateCode(value.city),
-                    location: { type: "Point", coordinates: [value.lng, value.lat] },
-                    accuracyM: value.accuracyM,
-                    name: value.name,
-                    category: value.category,
-                    houseNumber: value.houseNumber,
-                    quarter: value.quarter,
-                    city: value.city,
-                    region: value.region,
-                    landmark: value.landmark,
-                    visibility: value.visibility,
-                    consentAt: new Date(),
-                    consentVersion: CONSENT_VERSION,
-                    adultOrParentOk: true,
-                    status: "live",
-                    ownerId: deviceId,
-                });
-            } catch (error) {
-                if (error?.code !== 11000) throw error;
+        try {
+            for (let attempt = 0; attempt < 5 && !place; attempt++) {
+                try {
+                    place = await Place.create({
+                        _id: placeId,
+                        code: generateCode(value.city),
+                        location: { type: "Point", coordinates: [value.lng, value.lat] },
+                        accuracyM: value.accuracyM,
+                        name: value.name,
+                        category: value.category,
+                        streetId: street ? street._id : undefined,
+                        ...numbering,
+                        pinAdjusted: street ? value.pinAdjusted : undefined,
+                        officialNumber: value.officialNumber || undefined,
+                        quarter: value.quarter,
+                        city: value.city,
+                        region: value.region,
+                        landmark: value.landmark,
+                        visibility: value.visibility,
+                        consentAt: new Date(),
+                        consentVersion: CONSENT_VERSION,
+                        adultOrParentOk: true,
+                        status: "live",
+                        ownerId: deviceId,
+                    });
+                } catch (error) {
+                    if (error?.code !== 11000) throw error;
+                }
             }
+        } finally {
+            // The label and a street created for this request were never shown: give them back if the place was not stored.
+            if (!place) await undoCreate(label, streetCreated ? street : null);
         }
         if (!place) return json({ error: "Could not allocate a code, try again" }, 503);
 
-        const response = json({ ...publicPlace(place), isOwner: true }, 201);
+        if (street) await countPlace(street);
+
+        const response = json({ ...publicPlace(place, street), isOwner: true }, 201);
         if (newToken) response.cookies.set(DEVICE_COOKIE, newToken, deviceCookieOptions());
         return response;
     } catch (error) {
@@ -82,6 +207,29 @@ export const createPlace = async (req) => {
         return serverError(error);
     }
 };
+
+async function undoCreate(label, street) {
+    try {
+        if (label) await AddressLabel.deleteOne({ _id: label._id });
+        if (street) await Street.deleteOne({ _id: street._id });
+    } catch (error) {
+        console.error(error);
+    }
+}
+
+// The place is already stored: a failed counter must not turn the request into an error.
+async function countPlace(street) {
+    try {
+        await Street.updateOne({ _id: street._id }, { $inc: { placeCount: 1 } });
+        // A street with five houses keeps the name its first registrant proposed.
+        await Street.updateOne(
+            { _id: street._id, nameStatus: "proposed", nameSource: "community", placeCount: { $gte: ACCEPT_AT_PLACES } },
+            { $set: { nameStatus: "accepted" } }
+        );
+    } catch (error) {
+        console.error(error);
+    }
+}
 
 export const getPlaceByCode = async (req, rawCode) => {
     try {
@@ -94,7 +242,8 @@ export const getPlaceByCode = async (req, rawCode) => {
         const isOwner = Boolean(place && deviceId && place.ownerId === deviceId);
         // Private places look exactly like missing ones to everybody but the owner.
         if (!place || (place.visibility === "private" && !isOwner)) return json({ error: "Not found" }, 404);
-        return json({ ...publicPlace(place), isOwner }, 200);
+        const streets = await streetsById([place]);
+        return json({ ...publicPlace(place, streets.get(String(place.streetId))), isOwner }, 200);
     } catch (error) {
         return serverError(error);
     }
@@ -108,7 +257,8 @@ export const listPlaces = async (req) => {
             const deviceId = deviceIdFrom(req);
             if (!deviceId) return json({ places: [] }, 200);
             const places = await Place.find({ ownerId: deviceId }).sort({ createdAt: -1 }).limit(50);
-            return json({ places: places.map((p) => ({ ...publicPlace(p), isOwner: true })) }, 200);
+            const streets = await streetsById(places);
+            return json({ places: places.map((p) => ({ ...publicPlace(p, streets.get(String(p.streetId))), isOwner: true })) }, 200);
         }
 
         const search = cleanSearch(params.get("search"));
@@ -120,7 +270,8 @@ export const listPlaces = async (req) => {
             status: "live",
             name: { $regex: escapeRegex(search), $options: "i" },
         }).limit(20);
-        return json({ places: places.map((p) => ({ ...publicPlace(p), isOwner: false })) }, 200);
+        const streets = await streetsById(places);
+        return json({ places: places.map((p) => ({ ...publicPlace(p, streets.get(String(p.streetId))), isOwner: false })) }, 200);
     } catch (error) {
         return serverError(error);
     }
@@ -146,7 +297,8 @@ export const updatePlace = async (req, rawCode) => {
             { returnDocument: "after", runValidators: true }
         );
         if (!place) return json({ error: "Not found" }, 404);
-        return json({ ...publicPlace(place), isOwner: true }, 200);
+        const streets = await streetsById([place]);
+        return json({ ...publicPlace(place, streets.get(String(place.streetId))), isOwner: true }, 200);
     } catch (error) {
         if (error?.name === "ValidationError") return json({ error: "Invalid data" }, 400);
         return serverError(error);
@@ -163,8 +315,20 @@ export const deletePlace = async (req, rawCode) => {
         if (!deviceId) return json({ error: "Not found" }, 404);
         const place = await Place.findOneAndDelete({ code, ownerId: deviceId });
         if (!place) return json({ error: "Not found" }, 404);
+        await retireLabel(place);
         return json({ deleted: true }, 200);
     } catch (error) {
         return serverError(error);
     }
 };
+
+// The label of a deleted place is retired, never reused; the street's counter goes down.
+async function retireLabel(place) {
+    if (!place.streetId) return;
+    try {
+        await AddressLabel.updateOne({ placeId: place._id }, { $set: { state: "retired" }, $unset: { placeId: "" } });
+        await Street.updateOne({ _id: place.streetId, placeCount: { $gt: 0 } }, { $inc: { placeCount: -1 } });
+    } catch (error) {
+        console.error(error);
+    }
+}

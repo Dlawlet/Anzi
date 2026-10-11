@@ -2,7 +2,8 @@ import { fmt } from '../i18n/lang'
 import type { PlaceView } from '../types/place'
 
 type Located = Pick<PlaceView, 'lat' | 'lng'>
-type Shareable = Pick<PlaceView, 'code' | 'name' | 'houseNumber' | 'quarter' | 'city' | 'landmark' | 'lat' | 'lng'>
+type Addressable = { street: { name: string } | null } & Pick<PlaceView, 'houseNumber' | 'houseSuffix' | 'officialNumber' | 'quarter' | 'city'>
+type Shareable = Addressable & Pick<PlaceView, 'code' | 'name' | 'landmark' | 'lat' | 'lng'>
 
 const coords = ({ lat, lng }: Located) => `${lat.toFixed(6)},${lng.toFixed(6)}`
 
@@ -15,14 +16,21 @@ export const mapsNavigateUrl = (place: Located) =>
 
 export const whatsappUrl = (text: string) => `https://wa.me/?text=${encodeURIComponent(text)}`
 
-// "N° 12, Bastos, Yaoundé": empty parts are skipped.
-export function addressLine(place: Pick<PlaceView, 'houseNumber' | 'quarter' | 'city'>, houseNoTemplate: string): string {
-  return [place.houseNumber ? fmt(houseNoTemplate, { n: place.houseNumber }) : '', place.quarter, place.city]
-    .filter(Boolean)
-    .join(', ')
+// Templates for the street address; the type word (Rue / Street) follows the reader's language.
+export type AddressTemplates = { street: string; unnamed: string; houseNo: string }
+
+// "12 Rue Manguier, Bastos, Yaoundé". Without a number the street name alone leads; an official plate is the fallback.
+// Empty parts are skipped.
+export function addressLine(place: Addressable, tpl: AddressTemplates): string {
+  const n = place.houseNumber != null ? `${place.houseNumber}${place.houseSuffix}` : ''
+  let lead = ''
+  if (n && place.street?.name) lead = fmt(tpl.street, { n, name: place.street.name })
+  else if (n && place.street) lead = fmt(tpl.unnamed, { n })
+  else if (place.officialNumber) lead = fmt(tpl.houseNo, { n: place.officialNumber })
+  return [lead, place.quarter, place.city].filter(Boolean).join(', ')
 }
 
-type ShareLabels = { code: string; landmark: string; houseNo: string }
+type ShareLabels = AddressTemplates & { code: string; landmark: string }
 
 // Name, code and landmark first, then the Google Maps link. The Anzi link goes last, and only when a
 // real domain is configured (see utils/site.ts).
@@ -30,7 +38,7 @@ export function buildShareText(place: Shareable, labels: ShareLabels, siteUrl: s
   const lines = [
     place.name,
     `${labels.code}: ${place.code}`,
-    addressLine(place, labels.houseNo),
+    addressLine(place, labels),
     place.landmark ? `${labels.landmark}: ${place.landmark}` : '',
     mapsViewUrl(place),
     siteUrl ?? '',

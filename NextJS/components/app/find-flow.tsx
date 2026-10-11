@@ -118,7 +118,7 @@ export default function FindFlow({ initialCode }: { initialCode?: string }) {
                   >
                     <span className="block break-words text-base font-semibold text-gray-900">{place.name}</span>
                     <span className="block break-words text-base text-gray-700">
-                      {addressLine(place, t.card.houseNo)} · {place.code}
+                      {addressLine(place, t.card)} · {place.code}
                     </span>
                   </button>
                 </li>

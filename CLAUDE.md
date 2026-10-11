@@ -40,7 +40,7 @@ Source of truth: `.claude/jarvis.json` → `commands`. Use them, do not guess. R
 
 ## Conventions
 - Both `package-lock.json` and `yarn.lock` are tracked; npm is the effective manager (dependabot updates `package-lock.json`). Do not run `yarn` or regenerate lockfiles. npm also rewrites `yarn.lock`: `git checkout -- NextJS/yarn.lock` after any npm install.
-- Env vars (`MONGODB_URI` and `DEVICE_TOKEN_SECRET` (>= 32 random chars, required in production; both server-only), `NEXT_PUBLIC_MAPBOX_TOKEN`) belong in `NextJS/.env.local` only, never committed.
+- Env vars (`MONGODB_URI`, `DEVICE_TOKEN_SECRET` and `ADMIN_TOKEN` (the last two >= 32 random chars, required in production; all server-only; admin API stays closed without `ADMIN_TOKEN`), `NEXT_PUBLIC_MAPBOX_TOKEN`) belong in `NextJS/.env.local` only, never committed.
 
 ## Gotchas
 - `NEXT_PUBLIC_*` vars are inlined into the client bundle; the DB URI currently uses that prefix (see status.md).
