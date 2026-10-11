@@ -3,7 +3,7 @@
 > Living memory of the project. Read at session start (first lines are auto-injected). Keep it short: summarise, don't append forever.
 
 ## Goal
-Anzi: Next.js app where users view a map of addresses (Mapbox + directions), submit new addresses or address requests, and join a mailing list. Backed by MongoDB via Mongoose. Kind: poc.
+Anzi: Next.js app where users view a map of addresses (Mapbox), and submit new addresses or address requests. Backed by MongoDB via Mongoose. Kind: poc.
 
 ## Current state (2026-10-11)
 - Branch `chore/refresh-foundations` (not merged): Phase 0 items done except the leftovers listed in Next steps. Next 16.4, React 19, mongoose 9, sharp 0.35, ESLint 9 (flat config, `eslint .`), Vitest 3->5 (needs Node >= 22.12). Plain `npm ci` passes; lint, `tsc`, 13 tests and `next build` pass.
@@ -35,9 +35,9 @@ Anzi: Next.js app where users view a map of addresses (Mapbox + directions), sub
 
 ## Architecture map
 - `NextJS/app/(pages)/api/<name>/route.ts` + `<name>_controller.js` → HTTP handlers and logic
-- `NextJS/models/*.js` → Mongoose schemas (address, mailing, request)
+- `NextJS/models/*.js` → Mongoose schemas (address, request)
 - `NextJS/utils/connectMongo.js` → cached Mongo connection
-- `NextJS/components/map.tsx` → Mapbox map and directions widget
+- `NextJS/components/map.tsx` → Mapbox map and geocoder
 - `NextJS/server.mjs` → custom dev server (port 3000)
 
 ## History (compact, newest first)
