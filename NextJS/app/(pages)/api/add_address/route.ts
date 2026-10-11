@@ -1,24 +1,7 @@
 import { addaddress } from './add_ask_controller.js';
-import { NextRequest } from 'next/server';
 import {connectToDatabase} from '../../../../utils/connectMongo.js';
-
-
-export  async function GET(req: NextRequest) {
-  await connectToDatabase();
-}
 
 export async function POST(req: Request) {
     await connectToDatabase();
-    const responses = await addaddress(req);
-    return responses;
+    return addaddress(req);
 }
-
-
-
-export async function PUT(req: Request) {
-} 
-
-export async function DELETE(req: Request) {
-}
-
-

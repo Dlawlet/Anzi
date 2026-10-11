@@ -35,19 +35,6 @@ export default function Header() {
                   Add Address 
                 </Link>
               </li>
-              {/*<li>
-                <Link
-                  href="/signin"
-                  className="font-medium text-brown-600 hover:text-gray-200 px-4 py-3 flex items-center transition duration-150 ease-in-out"
-                >
-                  Sign in
-                </Link>
-              </li>
-               <li>
-                <Link href="/signup" className="btn-sm text-white bg-brown-600 hover:bg-brown-700 ml-3">
-                  Sign up
-                </Link>
-              </li> */}
               <li>
                 <Link href="/request_address" 
                 className="btn-sm text-white bg-brown-600 hover:bg-brown-700 ml-3">

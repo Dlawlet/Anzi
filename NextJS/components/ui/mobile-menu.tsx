@@ -73,24 +73,11 @@ export default function MobileMenu() {
               Add Address
             </Link>
           </li>
-          {/* <li>
-            <Link href="/signin" className="flex font-medium w-full text-brown-600 hover:text-gray-200 py-2 justify-center" onClick={() => setMobileNavOpen(false)}>
-              Sign in
-            </Link>
-          </li>
-          <li>
-            <Link
-              href="/signup"
-              className="flex font-medium w-full text-brown-600 hover:text-gray-200 py-2 justify-center" onClick={() => setMobileNavOpen(false)}
-            >
-              Sign up
-            </Link>
-          </li> */
           <li>
               <Link href="/request_address" className="font-medium w-full inline-flex items-center justify-center border border-transparent px-4 py-2 my-2 rounded-sm text-white bg-brown-600 hover:bg-brown-700 transition duration-150 ease-in-out" onClick={() => setMobileNavOpen(false)}>
                 Request an Address
               </Link>
-          </li>}
+          </li>
         </ul>
       </nav>
     </div>
