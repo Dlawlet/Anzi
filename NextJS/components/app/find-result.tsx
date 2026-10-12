@@ -5,15 +5,15 @@ import Link from 'next/link'
 import type { Dict } from '@/i18n/dictionary'
 import { fmt } from '@/i18n/lang'
 import { hitLine, hitTitle, type Hit } from '@/utils/findClient'
-import { buildShareText, whatsappUrl } from '@/utils/share'
-import { SITE_URL } from '@/utils/site'
+import { whatsappUrl } from '@/utils/share'
 import { staticMapUrl, type MapView } from '@/utils/staticMap'
 import AddressPlate from './address-plate'
 import GoSheet from './go-sheet'
-import { CategoryIcon, CopyIcon, NavigateIcon, ShareIcon } from './icons'
+import { CategoryIcon, ChatIcon, CopyIcon, NavigateIcon } from './icons'
 import MapCard from './map-card'
 import MapPreview from './map-preview'
 import SaveCardButton from './save-card-button'
+import ShareButton, { placeShareText } from './share-button'
 import { primaryButton, secondaryButton } from './ui-classes'
 
 const ZOOM = 17
@@ -56,6 +56,7 @@ export default function FindResult({ hit, t, onBack }: { hit: Hit; t: Dict; onBa
   const title = hitTitle(hit, t.card)
   const line = hitLine(hit, t.card)
   const place = hit.place
+  const shareText = place ? placeShareText(place, t) : ''
   const english = hit.street?.lang === 'en'
   const where = [hit.quarter, hit.city].filter(Boolean).join(' · ')
   const category = place ? (t.categories as Record<string, string>)[place.category] : undefined
@@ -145,14 +146,10 @@ export default function FindResult({ hit, t, onBack }: { hit: Hit; t: Dict; onBa
           {t.go.title}
         </button>
         <GoSheet lat={hit.lat} lng={hit.lng} label={line} open={goOpen} onClose={closeGo} />
+        {place && <ShareButton place={place} t={t} text={shareText} className={secondaryButton} />}
         {place && (
-          <a
-            href={whatsappUrl(buildShareText(place, { code: t.share.code, landmark: t.share.landmark, street: t.card.street, unnamed: t.card.unnamed, houseNo: t.card.houseNo }, SITE_URL))}
-            target="_blank"
-            rel="noopener noreferrer"
-            className={secondaryButton}
-          >
-            <ShareIcon className="h-6 w-6" />
+          <a href={whatsappUrl(shareText)} target="_blank" rel="noopener noreferrer" className={secondaryButton}>
+            <ChatIcon className="h-6 w-6" />
             {t.common.whatsapp}
           </a>
         )}

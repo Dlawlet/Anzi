@@ -1,5 +1,5 @@
-import { describe, expect, it } from 'vitest'
-import { drawAddressCard, wrapLines, type CardData } from './addressCard'
+import { afterEach, describe, expect, it, vi } from 'vitest'
+import { drawAddressCard, shareAddress, wrapLines, type CardData } from './addressCard'
 
 // A canvas stand-in: 10 px per character, and a log of every string drawn.
 function fakeCtx() {
@@ -55,5 +55,35 @@ describe('drawAddressCard', () => {
     const { ctx, drawn } = fakeCtx()
     drawAddressCard(ctx, { ...data, word: 'Street', wordAfter: true }, null, 'sans-serif')
     expect(drawn.indexOf('MANGUIER')).toBeLessThan(drawn.indexOf('STREET'))
+  })
+})
+
+describe('shareAddress', () => {
+  afterEach(() => vi.unstubAllGlobals())
+  const png = new Blob(['x'], { type: 'image/png' })
+
+  it('shares the image with the text when the browser can share files', async () => {
+    const share = vi.fn().mockResolvedValue(undefined)
+    vi.stubGlobal('navigator', { share, canShare: () => true })
+    expect(await shareAddress(png, 'a.png', 'Salon', 'hello')).toBe('shared')
+    expect(share.mock.calls[0][0]).toMatchObject({ text: 'hello', title: 'Salon' })
+    expect(share.mock.calls[0][0].files).toHaveLength(1)
+  })
+
+  it('falls back to the text alone when files cannot be shared or the image failed', async () => {
+    const share = vi.fn().mockResolvedValue(undefined)
+    vi.stubGlobal('navigator', { share, canShare: () => false })
+    await shareAddress(png, 'a.png', 'Salon', 'hello')
+    await shareAddress(null, 'a.png', 'Salon', 'hello')
+    expect(share.mock.calls.every(([data]) => data.files === undefined && data.text === 'hello')).toBe(true)
+  })
+
+  it('reports a cancelled sheet, and an unsupported browser or a failing share for the wa.me fallback', async () => {
+    vi.stubGlobal('navigator', { share: vi.fn().mockRejectedValue(Object.assign(new Error('x'), { name: 'AbortError' })) })
+    expect(await shareAddress(png, 'a.png', 'S', 't')).toBe('cancelled')
+    vi.stubGlobal('navigator', { share: vi.fn().mockRejectedValue(new Error('boom')) })
+    expect(await shareAddress(png, 'a.png', 'S', 't')).toBe('unsupported')
+    vi.stubGlobal('navigator', {})
+    expect(await shareAddress(png, 'a.png', 'S', 't')).toBe('unsupported')
   })
 })

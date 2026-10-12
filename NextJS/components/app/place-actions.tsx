@@ -3,23 +3,19 @@
 import { useCallback, useState } from 'react'
 import type { Dict } from '@/i18n/dictionary'
 import type { PlaceView } from '@/types/place'
-import { addressLine, buildShareText, whatsappUrl } from '@/utils/share'
-import { SITE_URL } from '@/utils/site'
+import { addressLine, whatsappUrl } from '@/utils/share'
 import GoSheet from './go-sheet'
-import { CopyIcon, NavigateIcon, ShareIcon } from './icons'
+import { ChatIcon, CopyIcon, NavigateIcon } from './icons'
+import ShareButton, { placeShareText } from './share-button'
 import { primaryButton, secondaryButton } from './ui-classes'
 
 // Share and "Y aller" buttons under an address card. The owner leads with sharing, a visitor with navigating.
-export default function PlaceActions({ place, t, lead, whatsappTone }: { place: PlaceView; t: Dict; lead: 'share' | 'navigate'; whatsappTone?: 'leaf' }) {
+export default function PlaceActions({ place, t, lead, whatsappTone, withShareSheet = true }: { place: PlaceView; t: Dict; lead: 'share' | 'navigate'; whatsappTone?: 'leaf'; withShareSheet?: boolean }) {
   const [copied, setCopied] = useState(false)
   const [goOpen, setGoOpen] = useState(false)
   const closeGo = useCallback(() => setGoOpen(false), [])
 
-  const shareText = buildShareText(
-    place,
-    { code: t.share.code, landmark: t.share.landmark, street: t.card.street, unnamed: t.card.unnamed, houseNo: t.card.houseNo },
-    SITE_URL
-  )
+  const shareText = placeShareText(place, t)
 
   async function copyAddress() {
     try {
@@ -31,11 +27,16 @@ export default function PlaceActions({ place, t, lead, whatsappTone }: { place: 
     }
   }
 
+  // The system share sheet (image + text, any app, WhatsApp contacts included) leads; the WhatsApp link opens WhatsApp's
+  // own contact list with the text only, and is the only share button where the browser has no share sheet.
   const share = (
-    <a key="share" href={whatsappUrl(shareText)} target="_blank" rel="noopener noreferrer" className={whatsappTone === 'leaf' ? 'btn bg-leaf text-white' : lead === 'share' ? primaryButton : secondaryButton}>
-      <ShareIcon className="h-6 w-6" />
-      {t.common.whatsapp}
-    </a>
+    <div key="share" className="flex flex-col gap-2">
+      {withShareSheet && <ShareButton place={place} t={t} text={shareText} className={lead === 'share' ? primaryButton : secondaryButton} />}
+      <a href={whatsappUrl(shareText)} target="_blank" rel="noopener noreferrer" className={whatsappTone === 'leaf' ? 'btn bg-leaf text-white' : secondaryButton}>
+        <ChatIcon className="h-6 w-6" />
+        {t.common.whatsapp}
+      </a>
+    </div>
   )
   const maps = (
     <button key="maps" type="button" onClick={() => setGoOpen(true)} className={lead === 'navigate' ? primaryButton : secondaryButton}>

@@ -261,3 +261,19 @@ export async function saveAddressCard(blob: Blob, filename: string, title: strin
   setTimeout(() => URL.revokeObjectURL(url), 10000)
   return 'downloaded'
 }
+
+export const canNativeShare = () => typeof navigator !== 'undefined' && typeof navigator.share === 'function'
+
+// Opens the system share sheet (WhatsApp with its contact list, Messages, ...) with the card image and the text.
+// Without a usable image the text goes alone. 'unsupported' means the caller should fall back to a wa.me link.
+export async function shareAddress(blob: Blob | null, filename: string, title: string, text: string): Promise<'shared' | 'cancelled' | 'unsupported'> {
+  if (!canNativeShare()) return 'unsupported'
+  const file = blob ? new File([blob], filename, { type: 'image/png' }) : null
+  const data: ShareData = file && navigator.canShare?.({ files: [file] }) ? { files: [file], title, text } : { title, text }
+  try {
+    await navigator.share(data)
+    return 'shared'
+  } catch (error) {
+    return (error as Error).name === 'AbortError' ? 'cancelled' : 'unsupported'
+  }
+}
