@@ -104,6 +104,7 @@ Anzi: Next.js app where users view a map of addresses (Mapbox), and submit new a
 - Create from the map: the "where are you" screen is skipped (GPS check starts by itself, title "Est-ce la bonne maison ?").
 - Full-screen map: "my position" (GeolocateControl) and base-map switcher (Plan, Satellite, Relief, Clair); layers re-added on `style.load`.
 - Postal code per quarter (subagent): `PostalCode` registry, `Street.postalCode`, `POST/GET /api/admin/postal` + admin section, inherited by new streets, shown in the FULL line "12 Rue Manguier, Bastos, 1060 Yaoundé" (`utils/share.ts` `addressLine`, `placeWhere`). TODO: `hitLine` in `utils/findClient.ts` and the map-card line do not show it yet. 253 tests, tsc, lint, build pass; nothing tried in a browser.
+- Fix (9f84539): the "Ajouter une adresse" button stays visible after a search result (it was hidden, so no other place could be picked). Not tried on a phone.
 - `next build` printed a Next.js security-advisory notice (`next upgrade --agent=security`): look at it before launch.
 
 ## Integration smoke test on real Atlas (2026-10-21, night): PASSED
