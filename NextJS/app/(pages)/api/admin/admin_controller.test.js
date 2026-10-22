@@ -8,6 +8,8 @@ const m = vi.hoisted(() => ({
   placeUpdateOne: vi.fn(),
   labelCreate: vi.fn(),
   rl: vi.fn(),
+  trustedUpsert: vi.fn(),
+  trustedDelete: vi.fn(),
 }));
 
 vi.mock("../../../../models/streetModel.js", () => ({
@@ -15,9 +17,10 @@ vi.mock("../../../../models/streetModel.js", () => ({
 }));
 vi.mock("../../../../models/placeModel.js", () => ({ default: { find: m.placeFind, updateOne: m.placeUpdateOne } }));
 vi.mock("../../../../models/addressLabelModel.js", () => ({ default: { create: m.labelCreate } }));
+vi.mock("../../../../models/trustedIpModel.js", () => ({ default: { findOneAndUpdate: m.trustedUpsert, deleteOne: m.trustedDelete } }));
 vi.mock("../../../../models/rateLimitModel.js", () => ({ default: { findOneAndUpdate: m.rl } }));
 
-import { getQueue, setStreetLine, setStreetName, suggestStreetLine } from "./admin_controller.js";
+import { getQueue, setStreetLine, setStreetName, setTrustedIp, suggestStreetLine } from "./admin_controller.js";
 
 const TOKEN = "t".repeat(40);
 const ID = "66f1c0ffee0000000000abcd";
@@ -255,5 +258,26 @@ describe("suggestStreetLine", () => {
     vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new Error("timeout")));
     expect((await suggestStreetLine(makeReq(), ID)).status).toBe(502);
     vi.unstubAllGlobals();
+  });
+});
+
+describe("setTrustedIp", () => {
+  const post = (json, extra = {}) => makeReq({ json, headers: { origin: "http://anzi.test", "x-forwarded-for": "9.9.9.9" }, ...extra });
+
+  it("needs the admin token and a boolean", async () => {
+    expect((await setTrustedIp(post({ on: true }, { token: "" }))).status).toBe(401);
+    expect((await setTrustedIp(post({ on: "yes" }))).status).toBe(400);
+  });
+
+  it("trusts the caller's IP for 24 h by default and can stop", async () => {
+    const res = await setTrustedIp(post({ on: true }));
+    expect(res.status).toBe(200);
+    const [filter, update] = m.trustedUpsert.mock.calls[0];
+    expect(filter.ipHash).toMatch(/^[0-9a-f]{32}$/);
+    const hours = (update.$set.expiresAt.getTime() - Date.now()) / 3600000;
+    expect(hours).toBeGreaterThan(23.9);
+    expect(hours).toBeLessThan(24.1);
+    await setTrustedIp(post({ on: false }));
+    expect(m.trustedDelete).toHaveBeenCalledWith({ ipHash: filter.ipHash });
   });
 });

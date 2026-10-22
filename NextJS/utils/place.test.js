@@ -44,6 +44,10 @@ describe("validateNewPlace", () => {
   });
   it("requires consent and coordinates inside Cameroon", () => {
     expect(validateNewPlace({ ...valid, consent: false }).errors).toContain("consent");
+    // The phone's own reading: a pin near it is fine, one far away is refused.
+    expect(validateNewPlace({ ...valid, fix: { lng: 11.5168, lat: 3.8668 } }).errors).toEqual([]);
+    expect(validateNewPlace({ ...valid, fix: { lng: 11.6, lat: 3.9 } }).errors).toContain("location");
+    expect(validateNewPlace({ ...valid, fix: { lng: "x", lat: 3.9 } }).errors).toContain("location");
     expect(validateNewPlace({ ...valid, adultOrParentOk: undefined }).errors).toContain("adultOrParentOk");
     expect(validateNewPlace({ ...valid, lng: -74.5, lat: 40 }).errors).toContain("location");
     expect(validateNewPlace({ ...valid, lng: "abc" }).errors).toContain("location");

@@ -47,6 +47,8 @@ export default function InteractiveMap({
   tags,
   label,
   pin,
+  adding,
+  onTarget,
   onFail,
 }: {
   center: LngLat
@@ -55,12 +57,21 @@ export default function InteractiveMap({
   tags: HomeTag[]
   label: string
   pin?: MapPinTarget | null
+  adding?: boolean // "add an address" mode: a tap puts a movable pin on the house
+  onTarget?: (at: LngLat) => void
   onFail: () => void
 }) {
   const container = useRef<HTMLDivElement>(null)
   const mapRef = useRef<mapboxgl.Map | null>(null)
   const markerRef = useRef<mapboxgl.Marker | null>(null)
   const firstPin = useRef(pin)
+  const targetRef = useRef<mapboxgl.Marker | null>(null)
+  const addingRef = useRef(Boolean(adding))
+  const onTargetRef = useRef(onTarget)
+  useEffect(() => {
+    addingRef.current = Boolean(adding)
+    onTargetRef.current = onTarget
+  }, [adding, onTarget])
 
   useEffect(() => {
     if (!container.current) return
@@ -79,6 +90,21 @@ export default function InteractiveMap({
       const first = firstPin.current
       markerRef.current = new mapboxgl.Marker({ element: pinElement(first.number), anchor: 'bottom' }).setLngLat([first.lng, first.lat]).addTo(map)
     }
+    // Add mode: a tap drops (or moves) the pin; the marker can then be dragged onto the exact house.
+    map.on('click', (event) => {
+      if (!addingRef.current) return
+      const at: LngLat = [event.lngLat.lng, event.lngLat.lat]
+      if (!targetRef.current) {
+        const marker = new mapboxgl.Marker({ element: pinElement(''), anchor: 'bottom', draggable: true }).setLngLat(at).addTo(map)
+        marker.getElement().style.pointerEvents = 'auto'
+        marker.on('dragend', () => {
+          const p = marker.getLngLat()
+          onTargetRef.current?.([p.lng, p.lat])
+        })
+        targetRef.current = marker
+      } else targetRef.current.setLngLat(at)
+      onTargetRef.current?.(at)
+    })
     map.on('error', (event) => {
       // A failed style or token means a blank map: say so instead of leaving a grey box.
       if (!map.isStyleLoaded()) {
@@ -127,6 +153,8 @@ export default function InteractiveMap({
     })
 
     return () => {
+      targetRef.current?.remove()
+      targetRef.current = null
       markerRef.current?.remove()
       markerRef.current = null
       mapRef.current = null
@@ -135,6 +163,13 @@ export default function InteractiveMap({
     // The map is created once per opening; props are the first view.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
+
+  // Leaving add mode takes the pin away.
+  useEffect(() => {
+    if (adding) return
+    targetRef.current?.remove()
+    targetRef.current = null
+  }, [adding])
 
   // A new search result: move the pin and recentre the map on it.
   useEffect(() => {

@@ -7,7 +7,7 @@ export type MapView = { center: LngLat; zoom: number; width: number; height: num
 
 const TILE = 512 // Mapbox GL and Static Images use 512 px tiles
 const MIN_ZOOM = 12
-const MAX_ZOOM = 17
+const MAX_ZOOM = 17 // fitView only; staticMapUrl takes any zoom
 
 const worldSize = (zoom: number) => TILE * 2 ** zoom
 const mercatorX = (lng: number, zoom: number) => ((lng + 180) / 360) * worldSize(zoom)
@@ -29,6 +29,16 @@ export function toPixel(view: MapView, [lng, lat]: LngLat): { x: number; y: numb
 export function toPercent(view: MapView, point: LngLat): { left: number; top: number } {
   const { x, y } = toPixel(view, point)
   return { left: round((x / view.width) * 100, 2), top: round((y / view.height) * 100, 2) }
+}
+
+// Inverse of toPixel: the point under a pixel of the image.
+export function fromPixel(view: MapView, x: number, y: number): LngLat {
+  const world = worldSize(view.zoom)
+  const px = mercatorX(view.center[0], view.zoom) + (x - view.width / 2)
+  const py = mercatorY(view.center[1], view.zoom) + (y - view.height / 2)
+  const lng = (px / world) * 360 - 180
+  const lat = (Math.atan(Math.sinh(Math.PI * (1 - (2 * py) / world))) * 180) / Math.PI
+  return [lng, lat]
 }
 
 const round = (value: number, digits: number) => {

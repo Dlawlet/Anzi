@@ -63,6 +63,17 @@ export default function AdminTool() {
     [token]
   )
 
+  // Test mode: this connection no longer has to stand at a house picked on the map (24 h, then it expires).
+  async function trustMyIp(on: boolean) {
+    setBusy(true)
+    try {
+      const { ok, status } = await call('/api/admin/trust-ip', { on })
+      setMessage(ok ? (on ? 'This connection skips the "be at the house" check for 24 h.' : 'Test mode off for this connection.') : `Error ${status}.`)
+    } finally {
+      setBusy(false)
+    }
+  }
+
   async function loadQueue() {
     setBusy(true)
     setMessage('')
@@ -233,6 +244,10 @@ export default function AdminTool() {
           <input id="admin-token" type="password" autoComplete="off" className={`${input} min-w-0 flex-1`} placeholder="ADMIN_TOKEN" value={token} onChange={(e) => setToken(e.target.value)} />
           <button className={button} disabled={busy || token.length < 8}>Load</button>
         </form>
+        <div className="flex flex-wrap items-center gap-2 text-sm">
+          <button className={ghost} disabled={busy || token.length < 8} onClick={() => trustMyIp(true)}>Test mode: trust my IP (24 h)</button>
+          <button className={ghost} disabled={busy || token.length < 8} onClick={() => trustMyIp(false)}>Stop</button>
+        </div>
         {message && <p role="status" className="rounded bg-gray-800 p-3 text-sm">{message}</p>}
 
         {queue && (

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { boxAt, chipPlacement, fitView, keepFree, linePath, staticMapUrl, toPercent, toPixel, type MapView } from './staticMap'
+import { boxAt, chipPlacement, fitView, fromPixel, keepFree, linePath, staticMapUrl, toPercent, toPixel, type MapView } from './staticMap'
 
 const view: MapView = { center: [11.5167, 3.8667], zoom: 15, width: 720, height: 420 }
 
@@ -86,5 +86,16 @@ describe('staticMapUrl', () => {
 
   it('can ask for the sharper image', () => {
     expect(staticMapUrl(view, 'pk', { retina: true })).toContain('/720x420@2x?')
+  })
+})
+
+describe('fromPixel', () => {
+  it('is the inverse of toPixel', () => {
+    const view = { center: [11.5174, 3.8667] as [number, number], zoom: 18, width: 360, height: 200 }
+    const [lng, lat] = fromPixel(view, 250, 40)
+    const back = toPixel(view, [lng, lat])
+    expect(back.x).toBeCloseTo(250, 3)
+    expect(back.y).toBeCloseTo(40, 3)
+    expect(fromPixel(view, 180, 100)[0]).toBeCloseTo(11.5174, 6)
   })
 })

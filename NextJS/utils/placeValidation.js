@@ -1,3 +1,5 @@
+import { pinIsCoherent } from "./presence.js";
+
 export const CONSENT_VERSION = "2026-10-v1";
 export const CATEGORIES = ["home", "shop", "salon", "restaurant", "office", "other"];
 export const VISIBILITIES = ["private", "link", "public"];
@@ -27,6 +29,11 @@ export function validateNewPlace(body) {
     Number.isFinite(lng) && Number.isFinite(lat) &&
     lng >= BOUNDS.lng[0] && lng <= BOUNDS.lng[1] && lat >= BOUNDS.lat[0] && lat <= BOUNDS.lat[1];
   if (!inBox) errors.push("location");
+  // The phone's own reading may come along: the pin cannot be put far from where the phone says it is.
+  if (inBox && body.fix != null) {
+    const fix = { lng: Number(body.fix.lng), lat: Number(body.fix.lat) };
+    if (!Number.isFinite(fix.lng) || !Number.isFinite(fix.lat) || !pinIsCoherent(fix, { lng, lat })) errors.push("location");
+  }
 
   const name = clean(body.name, 80);
   if (!name || name.length < 2) errors.push("name");

@@ -14,6 +14,8 @@ import { suggestNames } from '@/utils/streetNouns.js'
 import type { NearStreet, PlaceView } from '@/types/place'
 import CreateDone from './create-done'
 import MiniMap from './mini-map'
+import PinMap from './pin-map'
+import { MAX_PIN_OFFSET_M, metresBetween, metresToTarget } from '@/utils/presence.js'
 import StepHeader from './step-header'
 import StreetNamePrompt from './street-name-prompt'
 import StreetPicker, { NEW_STREET, streetLabel } from './street-picker'
@@ -97,7 +99,11 @@ function fieldMessage(t: Dict, field: string): string {
   }
 }
 
-export default function CreateFlow() {
+type Spot = { lat: number; lng: number }
+
+// `target`: a house picked on the main map. The flow only goes on when this phone is near it (testers whose IP
+// is trusted by the admin skip that check).
+export default function CreateFlow({ target = null }: { target?: Spot | null }) {
   const { t, lang } = useI18n()
   const [step, setStep] = useState<Step>('where')
   const [form, setForm] = useState<Form>(EMPTY)
@@ -120,6 +126,14 @@ export default function CreateFlow() {
   const prefilledFor = useRef('')
 
   const gps = useGps()
+  // The pin the user moved onto the right house; null = the phone's own reading.
+  const [pin, setPin] = useState<Spot | null>(null)
+  const [exempt, setExempt] = useState(false)
+
+  useEffect(() => {
+    if (!target) return
+    fetch('/api/presence').then((r) => (r.ok ? r.json() : null)).then((b) => setExempt(Boolean(b?.exempt))).catch(() => {})
+  }, [target])
   const heading = useRef<HTMLHeadingElement>(null)
   const firstRender = useRef(true)
 
@@ -134,7 +148,11 @@ export default function CreateFlow() {
   }, [step, created])
 
   // The position lives in the GPS hook; the form only reads the final fix.
-  const fix = gps.state.status === 'done' ? gps.state.fix : null
+  const reading = gps.state.status === 'done' ? gps.state.fix : null
+  const spot = pin ?? (target && reading ? target : null)
+  // `fix` is the position every later step uses: the pin when there is one, else the phone's reading.
+  const fix = reading ? { ...reading, ...(spot ?? {}) } : null
+  const away = target && reading && !exempt ? metresToTarget(reading, target) : 0
 
   const list = useMemo(() => (streets.phase === 'ready' ? streets.streets : []), [streets])
   const noStreetNearby = streets.phase === 'ready' && list.length === 0
@@ -150,6 +168,7 @@ export default function CreateFlow() {
 
   function startGps() {
     setErrors((e) => ({ ...e, location: '' }))
+    setPin(null)
     gps.start()
   }
 
@@ -179,6 +198,8 @@ export default function CreateFlow() {
       if (!fix) e.location = t.create.where.needFix
       else if (!inCameroon(fix.lat, fix.lng)) e.location = t.create.where.outside
       else if (fix.accuracyM > GPS_MAX_M) e.location = t.create.where.poor
+      else if (away > 0) e.location = fmt(t.create.target.far, { m: away })
+      else if (reading && metresBetween(reading, fix) > MAX_PIN_OFFSET_M) e.location = t.create.where.tooFar
     }
     if (which === 'what') {
       if (!CATEGORIES.includes(form.category)) e.category = t.create.what.categoryError
@@ -275,6 +296,8 @@ export default function CreateFlow() {
           lat: fix.lat,
           lng: fix.lng,
           accuracyM: Math.round(fix.accuracyM),
+          pinAdjusted: spot !== null,
+          fix: reading ? { lat: reading.lat, lng: reading.lng } : undefined,
           name: form.name,
           category: form.category,
           city: form.city,
@@ -343,6 +366,7 @@ export default function CreateFlow() {
 
   function startAnother() {
     setCreated(null)
+    setPin(null)
     gps.reset()
     setForm({ ...EMPTY, city: form.city, region: form.region })
     setErrors({})
@@ -369,7 +393,7 @@ export default function CreateFlow() {
     consent: t.create.consent.title,
   }
   const locating = gps.state.status === 'locating'
-  const fixOk = Boolean(fix) && !errors.location
+  const fixOk = Boolean(fix) && !errors.location && away === 0
   const streetBusy = step === 'street' && streets.phase !== 'ready'
   const showNext = step === 'where' ? fixOk && !locating : step === 'street' ? !streetBusy : true
   const platePlate = joined?.ideal ? String(joined.ideal.number) : null
@@ -396,7 +420,22 @@ export default function CreateFlow() {
           else goNext()
         }}
       >
-        {step === 'where' && <WhereStep t={t} state={gps.state} fix={fix} error={errors.location} onStart={startGps} />}
+        {step === 'where' && (
+          <WhereStep
+            t={t}
+            state={gps.state}
+            fix={fix}
+            reading={reading}
+            origin={target && reading ? target : reading}
+            moved={pin !== null}
+            away={away}
+            targeted={Boolean(target)}
+            error={errors.location}
+            onStart={startGps}
+            onPin={setPin}
+            onReset={() => setPin(null)}
+          />
+        )}
 
         {step === 'what' && (
           <>
@@ -702,10 +741,17 @@ function WhereStep(props: {
   t: Dict
   state: ReturnType<typeof useGps>['state']
   fix: GpsFix | null
+  reading: GpsFix | null
+  origin: Spot | null
+  moved: boolean
+  away: number
+  targeted: boolean
   error?: string
   onStart: () => void
+  onPin: (spot: Spot) => void
+  onReset: () => void
 }) {
-  const { t, state, fix, error, onStart } = props
+  const { t, state, fix, reading, origin, moved, away, targeted, error, onStart, onPin, onReset } = props
   const w = t.create.where
 
   if (state.status === 'locating') {
@@ -731,12 +777,34 @@ function WhereStep(props: {
     )
   }
 
-  if (fix) {
+  if (fix && reading && away > 0) {
+    return (
+      <>
+        <p role="alert" className="rounded-xl border-2 border-danger bg-white p-3 text-base font-bold text-danger">
+          {fmt(t.create.target.far, { m: away })}
+        </p>
+        <button type="button" onClick={onStart} className={primaryButton}>
+          <CrosshairIcon className="h-6 w-6" />
+          {t.create.target.retry}
+        </button>
+      </>
+    )
+  }
+
+  if (fix && reading && origin) {
     const quality = gpsQuality(fix.accuracyM)
     const good = quality === 'good'
     return (
       <>
-        <MiniMap lat={fix.lat} lng={fix.lng} accuracyM={fix.accuracyM} label={w.title} note={w.entrance} />
+        <PinMap
+          origin={origin}
+          pin={fix}
+          reading={reading}
+          moved={moved}
+          onPin={onPin}
+          onReset={onReset}
+          labels={{ map: w.title, note: w.pinNote, reset: w.pinReset, satellite: w.satellite, plan: w.plan, help: w.pinHelp }}
+        />
         <div
           role="status"
           className={`rounded-2xl border-2 bg-white p-4 text-base text-night-900 ${good ? 'border-leaf' : quality === 'fair' ? 'border-sun' : 'border-danger'}`}
@@ -761,7 +829,7 @@ function WhereStep(props: {
 
   return (
     <>
-      <p className="text-base text-night-900">{w.intro}</p>
+      <p className="text-base text-night-900">{targeted ? t.create.target.intro : w.intro}</p>
       {error && <p className="text-base font-bold text-danger">{error}</p>}
       <button type="button" onClick={onStart} className={primaryButton}>
         <CrosshairIcon className="h-6 w-6" />

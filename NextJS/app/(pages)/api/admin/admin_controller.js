@@ -2,6 +2,7 @@ import { createHash, timingSafeEqual } from "node:crypto";
 import { NextResponse } from "next/server";
 import Place from "../../../../models/placeModel.js";
 import Street from "../../../../models/streetModel.js";
+import TrustedIp from "../../../../models/trustedIpModel.js";
 import { allow, clientIp, hashIp, sameOrigin } from "../../../../utils/rateLimit.js";
 import { OVERPASS_URL, overpassQuery, proposalsFrom } from "../../../../utils/osmTrace.js";
 import { allocateLabel, nameTakenNearby } from "../../../../utils/streetStore.js";
@@ -100,6 +101,28 @@ async function numberWaitingPlaces(street) {
     }
     return { numbered, skipped };
 }
+
+// POST /api/admin/trust-ip { on: boolean, hours?: 1..72 } : trust (or stop trusting) the caller's own IP for testing.
+// A trusted IP does not need to stand at the house picked on the map. Expires on its own (default 24 h).
+export const setTrustedIp = async (req) => {
+    try {
+        const denied = await guardAdmin(req, true);
+        if (denied) return denied;
+        const body = await readBody(req);
+        if (!body || typeof body.on !== "boolean") return json({ error: "Invalid JSON body" }, 400);
+        const ipHash = hashIp(clientIp(req));
+        if (!body.on) {
+            await TrustedIp.deleteOne({ ipHash });
+            return json({ trusted: false }, 200);
+        }
+        const hours = Number.isInteger(body.hours) && body.hours >= 1 && body.hours <= 72 ? body.hours : 24;
+        const expiresAt = new Date(Date.now() + hours * 3600 * 1000);
+        await TrustedIp.findOneAndUpdate({ ipHash }, { $set: { expiresAt } }, { upsert: true });
+        return json({ trusted: true, expiresAt }, 200);
+    } catch (error) {
+        return serverError(error);
+    }
+};
 
 // GET /api/admin/streets/[id]/suggest-line : up to 3 OpenStreetMap roads next to the street's point, as drawable lines.
 // Only a proposal: nothing is saved until the moderator saves a line.

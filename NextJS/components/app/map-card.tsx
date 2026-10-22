@@ -2,6 +2,7 @@
 
 import { Component, useCallback, useEffect, useRef, useState } from 'react'
 import dynamic from 'next/dynamic'
+import { useRouter } from 'next/navigation'
 import { createPortal } from 'react-dom'
 import { useI18n } from '@/i18n/provider'
 import { toPercent, type LngLat, type MapView } from '@/utils/staticMap'
@@ -10,8 +11,8 @@ import { hitLine, hitTitle, searchAddress, searchLocal, type Hit } from '@/utils
 import { readLocalPlaces } from '@/utils/localPlaces'
 import GoSheet from './go-sheet'
 import type { MapPinTarget } from './interactive-map'
-import { ExpandIcon, NavigateIcon, SearchIcon, ShrinkIcon } from './icons'
-import { secondaryButton } from './ui-classes'
+import { CrosshairIcon, ExpandIcon, NavigateIcon, SearchIcon, ShrinkIcon } from './icons'
+import { primaryButton, secondaryButton } from './ui-classes'
 
 function MapLoading() {
   const { t } = useI18n()
@@ -73,6 +74,10 @@ export default function MapCard({
   const [searching, setSearching] = useState(false)
   const [goOpen, setGoOpen] = useState(false)
   const closeGo = useCallback(() => setGoOpen(false), [])
+  // "Add an address": tap a house, then start the create flow with that position as the target.
+  const router = useRouter()
+  const [adding, setAdding] = useState(false)
+  const [target, setTarget] = useState<LngLat | null>(null)
 
   useEffect(() => {
     let cancelled = false
@@ -114,6 +119,8 @@ export default function MapCard({
 
   const toggle = () => {
     if (open) {
+      setAdding(false)
+      setTarget(null)
       setOpen(false)
       return
     }
@@ -162,7 +169,7 @@ export default function MapCard({
         {open && createPortal(
           <div role="dialog" aria-modal="true" aria-label={label} className="fixed inset-0 z-[60] bg-sand">
             <MapBoundary onFail={fail}>
-              <InteractiveMap center={pin ? [pin.lng, pin.lat] : view.center} zoom={view.zoom} streets={streets} tags={tags} label={label} pin={pin} onFail={fail} />
+              <InteractiveMap center={pin ? [pin.lng, pin.lat] : view.center} zoom={view.zoom} streets={streets} tags={tags} label={label} pin={pin} adding={adding} onTarget={setTarget} onFail={fail} />
             </MapBoundary>
             <div className="absolute inset-x-3 top-[max(0.75rem,env(safe-area-inset-top))] z-[2] flex items-center gap-2">
               <button ref={closeButton} type="button" onClick={toggle} className="map-btn !static flex-none">
@@ -188,7 +195,31 @@ export default function MapCard({
                 </button>
               </form>
             </div>
-            <div className={`absolute inset-x-3 bottom-[max(0.75rem,env(safe-area-inset-bottom))] z-[2] mx-auto max-w-md rounded-3xl bg-white p-3.5 shadow-warm2 ${current || mapMessage ? '' : 'hidden'}`}>
+            <div className="absolute bottom-[max(0.75rem,env(safe-area-inset-bottom))] left-3 z-[1] md:left-4">
+              {!adding && !current && !mapMessage && (
+                <button type="button" onClick={() => setAdding(true)} className="map-btn !static">
+                  <CrosshairIcon className="h-5 w-5" />
+                  {t.home.addHere}
+                </button>
+              )}
+            </div>
+            {adding && (
+              <div className="absolute inset-x-3 bottom-[max(0.75rem,env(safe-area-inset-bottom))] z-[2] mx-auto max-w-md rounded-3xl bg-white p-3.5 shadow-warm2">
+                <p role="status" className="text-base font-bold text-night-900">{t.home.addHint}</p>
+                <button
+                  type="button"
+                  disabled={!target}
+                  onClick={() => target && router.push(`/create?lat=${target[1].toFixed(6)}&lng=${target[0].toFixed(6)}`)}
+                  className={`${primaryButton} mt-3`}
+                >
+                  {t.home.addGo}
+                </button>
+                <button type="button" onClick={() => { setAdding(false); setTarget(null) }} className={`${secondaryButton} mt-2`}>
+                  {t.home.addCancel}
+                </button>
+              </div>
+            )}
+            <div className={`absolute inset-x-3 bottom-[max(0.75rem,env(safe-area-inset-bottom))] z-[2] mx-auto max-w-md rounded-3xl bg-white p-3.5 shadow-warm2 ${(current || mapMessage) && !adding ? '' : 'hidden'}`}>
               <p role="status" className={mapMessage ? 'text-base font-bold text-night-900' : 'sr-only'}>{mapMessage}</p>
               {current && !mapMessage && (
                 <>
