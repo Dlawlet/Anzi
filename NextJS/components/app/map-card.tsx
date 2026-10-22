@@ -195,8 +195,8 @@ export default function MapCard({
                 </button>
               </form>
             </div>
-            <div className="absolute bottom-[max(0.75rem,env(safe-area-inset-bottom))] left-3 z-[1] md:left-4">
-              {!adding && !current && !mapMessage && (
+            <div className={`absolute left-3 z-[1] md:left-4 ${current || mapMessage ? 'bottom-[max(11.5rem,env(safe-area-inset-bottom))]' : 'bottom-[max(0.75rem,env(safe-area-inset-bottom))]'}`}>
+              {!adding && (
                 <button type="button" onClick={() => setAdding(true)} className="map-btn !static">
                   <CrosshairIcon className="h-5 w-5" />
                   {t.home.addHere}
