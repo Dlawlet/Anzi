@@ -45,13 +45,12 @@ describe("share links", () => {
     expect(placeWhere(place)).toBe("Bastos · Yaoundé");
     expect(buildShareText(coded, labels, null).split("\n")[1]).toBe("12 Rue Manguier, Bastos, 1060 Yaoundé");
   });
-  it("leads with name, address and landmark; the backup code is never the first line", () => {
+  it("leads with name, address and landmark, the backup code last, and no link without a site address", () => {
     const text = buildShareText(place, labels, null);
     expect(text.split("\n")).toEqual([
       "Chez Mama Julie",
       "12 Rue Manguier, Bastos, Yaoundé",
       "Repère: Behind the pharmacy, yellow gate",
-      "https://www.google.com/maps/search/?api=1&query=3.866712,11.516734",
       "Code Anzi: YDE-7K4M",
     ]);
   });

@@ -5,7 +5,7 @@ import Link from 'next/link'
 import type { Dict } from '@/i18n/dictionary'
 import { fmt } from '@/i18n/lang'
 import { hitLine, hitTitle, type Hit } from '@/utils/findClient'
-import { anziSearchUrl, mapsViewUrl, placeWhere, whatsappUrl } from '@/utils/share'
+import { anziSearchUrl, placeWhere, whatsappUrl } from '@/utils/share'
 import { SITE_URL } from '@/utils/site'
 import { staticMapUrl, type MapView } from '@/utils/staticMap'
 import AddressPlate from './address-plate'
@@ -57,12 +57,11 @@ export default function FindResult({ hit, t, onBack }: { hit: Hit; t: Dict; onBa
   const title = hitTitle(hit, t.card)
   const line = hitLine(hit, t.card)
   const place = hit.place
-  // A position without a saved place has no code: its link re-runs the street + number search in Anzi (a plain
-  // Google Maps link when there is no street number or no public site address yet).
+  // A position without a saved place has no code: its link re-runs the street + number search in Anzi, or there is no link.
   const searchLink =
     SITE_URL && hit.street?.name && hit.number != null
       ? anziSearchUrl(SITE_URL, [`${hit.number}${hit.suffix}`, hit.street.name, hit.city].filter(Boolean).join(' '))
-      : mapsViewUrl(hit)
+      : ''
   const shareText = place ? placeShareText(place, t) : [line, searchLink].filter(Boolean).join('\n')
   const english = hit.street?.lang === 'en'
   const where = placeWhere({ street: hit.place?.street ?? null, quarter: hit.quarter, city: hit.city })

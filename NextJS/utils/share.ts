@@ -53,13 +53,13 @@ export const anziSearchUrl = (siteUrl: string, query: string) => `${siteUrl}/fin
 
 // Name, street address and landmark first, then the Anzi link, then the backup code (the code is how a link-only
 // place is opened in Anzi, but it is never the first thing the reader sees). Anzi needs a real domain (see
-// utils/site.ts); until one is configured the text carries a plain Google Maps link instead.
+// utils/site.ts); until one is configured the text carries no link.
 export function buildShareText(place: Shareable, labels: ShareLabels, siteUrl: string | null): string {
   const lines = [
     place.name,
     addressLine(place, labels),
     place.landmark ? `${labels.landmark}: ${place.landmark}` : '',
-    siteUrl ? anziPlaceUrl(siteUrl, place.code) : mapsViewUrl(place),
+    siteUrl ? anziPlaceUrl(siteUrl, place.code) : '',
     `${labels.code}: ${place.code}`,
   ]
   return lines.filter(Boolean).join('\n')
