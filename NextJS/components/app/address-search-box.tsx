@@ -1,5 +1,6 @@
 'use client'
 
+import { useRouter } from 'next/navigation'
 import { useRef, useState } from 'react'
 import { useI18n } from '@/i18n/provider'
 import { SearchIcon } from './icons'
@@ -10,6 +11,7 @@ import { StreetSuggestions, useStreetSuggestions } from './street-suggestions'
 export default function AddressSearchBox({ defaultValue }: { defaultValue?: string }) {
   const { t } = useI18n()
   const [value, setValue] = useState(defaultValue ?? '')
+  const router = useRouter()
   const input = useRef<HTMLInputElement>(null)
   const { items, accept } = useStreetSuggestions(value)
   return (
@@ -42,8 +44,11 @@ export default function AddressSearchBox({ defaultValue }: { defaultValue?: stri
         items={items}
         label={t.home.searchLabel}
         onPick={(item) => {
-          setValue(accept(item))
-          input.current?.focus()
+          const next = accept(item)
+          setValue(next)
+          // A place from the map is a finished answer: go and show it. A street name waits for its number.
+          if (item.map) router.push(`/find?q=${encodeURIComponent(next)}`)
+          else input.current?.focus()
         }}
       />
       <p className="mt-1.5 text-[15px] text-muted">{t.home.searchHelp}</p>

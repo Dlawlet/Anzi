@@ -31,7 +31,7 @@ export function useStreetSuggestions(query: string) {
 
   // The new box text for a picked suggestion; the list stays closed until the text changes again.
   const accept = (item: Suggestion) => {
-    const next = completeWith(query, item.name)
+    const next = item.map ? item.name : completeWith(query, item.name)
     accepted.current = next.trim()
     setItems([])
     return next
@@ -44,7 +44,7 @@ export function StreetSuggestions({ items, label, onPick }: { items: Suggestion[
   return (
     <ul aria-label={label} className="mt-2 divide-y divide-field overflow-hidden rounded-[14px] border-2 border-field bg-white">
       {items.map((item) => (
-        <li key={`${item.name}|${item.quarter}|${item.city}`}>
+        <li key={item.map?.id ?? `${item.name}|${item.quarter}|${item.city}`}>
           <button
             type="button"
             onClick={() => onPick(item)}

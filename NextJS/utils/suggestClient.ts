@@ -1,8 +1,11 @@
 import { parseQuery } from './addressQuery.js'
+import { geocodeText, type GeoFeature } from './geocode'
 
-export type Suggestion = { name: string; lang: 'fr' | 'en'; quarter: string; city: string }
+// An Anzi street name, or (when no Anzi street starts like that) a place from the map.
+export type Suggestion = { name: string; lang: 'fr' | 'en'; quarter: string; city: string; map?: GeoFeature }
 
 const MIN_LETTERS = 2
+const MAP_MIN = 3 // letters before the map is asked (its free quota is shared by every visitor)
 
 // Worth asking the server: at least two letters, and not a backup code.
 export function shouldSuggest(text: string): boolean {
@@ -21,7 +24,10 @@ export async function fetchSuggestions(text: string, signal: AbortSignal): Promi
   try {
     const res = await fetch(`/api/find/suggest?q=${encodeURIComponent(text.trim())}`, { signal })
     if (!res.ok) return []
-    return ((await res.json()) as { suggestions?: Suggestion[] }).suggestions ?? []
+    const streets = ((await res.json()) as { suggestions?: Suggestion[] }).suggestions ?? []
+    if (streets.length > 0 || text.trim().length < MAP_MIN) return streets
+    const found = await geocodeText(text, { autocomplete: true, limit: 4, signal })
+    return found.map((f) => ({ name: f.title, lang: 'fr' as const, quarter: '', city: f.city, map: f }))
   } catch {
     return []
   }

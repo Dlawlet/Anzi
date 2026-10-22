@@ -1,6 +1,7 @@
 import { parseQuery } from './addressQuery.js'
 import { nameKey } from './streetNames.js'
 import { addressLine, type AddressTemplates } from './share'
+import { geocodeText, type GeoFeature } from './geocode'
 import type { PlaceView } from '../types/place'
 
 // What the search box (Find page and the full-screen map) shows for one answer: a street + number, or a place.
@@ -79,6 +80,22 @@ const hitFromLegacy = (match: LegacyMatch): Hit => ({
   legacyTitle: match.title,
 })
 
+// A place found on the map (OpenStreetMap): a label and a position only, like an old address.
+export const hitFromGeocode = (f: GeoFeature): Hit => ({
+  key: `map:${f.id}`,
+  street: null,
+  number: null,
+  suffix: '',
+  formerName: null,
+  quarter: '',
+  city: f.city,
+  lat: f.lat,
+  lng: f.lng,
+  precisionM: null,
+  place: null,
+  legacyTitle: f.title,
+})
+
 // Addresses saved on this phone that answer the query: works with no connection.
 export function searchLocal(raw: string, places: PlaceView[]): Hit[] {
   const query = parseQuery(raw)
@@ -113,6 +130,9 @@ export async function searchAddress(raw: string): Promise<SearchOutcome> {
       const matches = (((await old.json()) as { matches?: LegacyMatch[] }).matches ?? []).map(hitFromLegacy)
       if (matches.length > 0) return { status: 'ok', hits: matches, ambiguous: matches.length > 1 }
     }
+    // Neither Anzi nor the old collection knows it: ask the map (OpenStreetMap), like the old search did.
+    const onMap = (await geocodeText(text)).map(hitFromGeocode)
+    if (onMap.length > 0) return { status: 'ok', hits: onMap, ambiguous: onMap.length > 1 }
     return { status: 'none', type: kind }
   } catch {
     return { status: 'error', reason: 'network' }

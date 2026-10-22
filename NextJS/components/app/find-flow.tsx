@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { useI18n } from '@/i18n/provider'
 import { fmt } from '@/i18n/lang'
 import type { Dict } from '@/i18n/dictionary'
-import { hitLine, hitTitle, searchAddress, searchLocal, type Hit } from '@/utils/findClient'
+import { hitFromGeocode, hitLine, hitTitle, searchAddress, searchLocal, type Hit } from '@/utils/findClient'
 import { readLocalPlaces } from '@/utils/localPlaces'
 import { addRecent, clearRecent, readRecent, type Recent } from '@/utils/recentLocal'
 import FindResult from './find-result'
@@ -125,8 +125,13 @@ export default function FindFlow({ initialCode }: { initialCode?: string }) {
             items={items}
             label={t.find.label}
             onPick={(item) => {
-              setQuery(accept(item))
-              input.current?.focus()
+              const next = accept(item)
+              setQuery(next)
+              if (item.map) {
+                const hit = hitFromGeocode(item.map)
+                open(hit, next)
+                setView({ kind: 'result', hit, fromList: null, q: next })
+              } else input.current?.focus()
             }}
           />
           <p id="q-hint" className="mt-1 text-base text-muted">{t.find.hint}</p>
