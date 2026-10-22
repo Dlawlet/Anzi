@@ -5,7 +5,7 @@ import Link from 'next/link'
 import type { Dict } from '@/i18n/dictionary'
 import { fmt } from '@/i18n/lang'
 import { hitLine, hitTitle, type Hit } from '@/utils/findClient'
-import { placeWhere, whatsappUrl } from '@/utils/share'
+import { mapsViewUrl, placeWhere, whatsappUrl } from '@/utils/share'
 import { staticMapUrl, type MapView } from '@/utils/staticMap'
 import AddressPlate from './address-plate'
 import GoSheet from './go-sheet'
@@ -13,7 +13,7 @@ import { CategoryIcon, ChatIcon, CopyIcon, NavigateIcon } from './icons'
 import MapCard from './map-card'
 import MapPreview from './map-preview'
 import SaveCardButton from './save-card-button'
-import ShareButton, { placeShareText } from './share-button'
+import ShareButton, { placeShareText, TextShareButton } from './share-button'
 import { primaryButton, secondaryButton } from './ui-classes'
 
 const ZOOM = 17
@@ -56,7 +56,8 @@ export default function FindResult({ hit, t, onBack }: { hit: Hit; t: Dict; onBa
   const title = hitTitle(hit, t.card)
   const line = hitLine(hit, t.card)
   const place = hit.place
-  const shareText = place ? placeShareText(place, t) : ''
+  // A position without a saved place has no code or Anzi link: the text is the address and a Google Maps link.
+  const shareText = place ? placeShareText(place, t) : [line, mapsViewUrl(hit)].filter(Boolean).join('\n')
   const english = hit.street?.lang === 'en'
   const where = placeWhere({ street: hit.place?.street ?? null, quarter: hit.quarter, city: hit.city })
   const category = place ? (t.categories as Record<string, string>)[place.category] : undefined
@@ -146,13 +147,15 @@ export default function FindResult({ hit, t, onBack }: { hit: Hit; t: Dict; onBa
           {t.go.title}
         </button>
         <GoSheet lat={hit.lat} lng={hit.lng} label={line} open={goOpen} onClose={closeGo} />
-        {place && <ShareButton place={place} t={t} text={shareText} className={secondaryButton} />}
-        {place && (
-          <a href={whatsappUrl(shareText)} target="_blank" rel="noopener noreferrer" className={secondaryButton}>
-            <ChatIcon className="h-6 w-6" />
-            {t.common.whatsapp}
-          </a>
+        {place ? (
+          <ShareButton place={place} t={t} text={shareText} className={secondaryButton} />
+        ) : (
+          <TextShareButton title={title} text={shareText} label={t.common.share} className={secondaryButton} />
         )}
+        <a href={whatsappUrl(shareText)} target="_blank" rel="noopener noreferrer" className={secondaryButton}>
+          <ChatIcon className="h-6 w-6" />
+          {t.common.whatsapp}
+        </a>
         <button type="button" onClick={copy} className={secondaryButton}>
           <CopyIcon className="h-6 w-6" />
           {copied ? t.common.copied : t.common.copy}

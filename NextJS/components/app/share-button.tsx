@@ -17,6 +17,24 @@ const subscribeNever = () => () => {}
 // "Partager": the system share sheet (WhatsApp with its contacts, Messages, ...) with the address card image and the text.
 // The image is drawn on this phone as soon as the button appears, so the tap itself stays instant (iOS only allows
 // sharing straight from a tap). Hidden where the browser has no share sheet: the WhatsApp link covers that case.
+// Share sheet with the text only, for a result that is a position and not a saved place (no card image to draw).
+export function TextShareButton({ title, text, label, className }: { title: string; text: string; label: string; className: string }) {
+  const supported = useSyncExternalStore(subscribeNever, canNativeShare, () => false)
+  if (!supported) return null
+
+  async function share() {
+    const result = await shareAddress(null, '', title, text)
+    if (result === 'unsupported') window.open(whatsappUrl(text), '_blank', 'noopener,noreferrer')
+  }
+
+  return (
+    <button type="button" onClick={share} className={className}>
+      <ShareIcon className="h-6 w-6" />
+      {label}
+    </button>
+  )
+}
+
 export default function ShareButton({ place, t, text, className }: { place: PlaceView; t: Dict; text: string; className: string }) {
   const supported = useSyncExternalStore(subscribeNever, canNativeShare, () => false)
   const [blob, setBlob] = useState<Blob | null>(null)
