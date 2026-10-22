@@ -4,7 +4,7 @@ import { fmt, resolveLang } from "../i18n/lang";
 import { regionForCity } from "./cities";
 import { gpsQuality, inCameroon } from "./gps";
 import { REGIONS } from "./placeValidation.js";
-import { addressLine, buildShareText, mapsNavigateUrl, mapsViewUrl, placeWhere, whatsappUrl } from "./share";
+import { addressLine, anziSearchUrl, buildShareText, mapsNavigateUrl, mapsViewUrl, placeWhere, whatsappUrl } from "./share";
 import { publicSiteUrl } from "./site";
 
 const place = {
@@ -21,6 +21,9 @@ describe("share links", () => {
     expect(mapsNavigateUrl(place)).toBe(
       "https://www.google.com/maps/dir/?api=1&destination=3.866712,11.516734&travelmode=driving"
     );
+  });
+  it("links a position without a code to the Anzi search", () => {
+    expect(anziSearchUrl("https://anzi.example", "132 Idriss Yaoundé")).toBe("https://anzi.example/find?q=132%20Idriss%20Yaound%C3%A9");
   });
   it("encodes the WhatsApp text", () => {
     const url = whatsappUrl("a b\nc&d");

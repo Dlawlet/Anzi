@@ -48,6 +48,9 @@ type ShareLabels = AddressTemplates & { code: string; landmark: string }
 // to Google Maps, Apple Maps or Waze.
 export const anziPlaceUrl = (siteUrl: string, code: string) => `${siteUrl}/find?code=${encodeURIComponent(code)}`
 
+// The link of a position that has no saved place (so no code): it re-runs the street + number search in Anzi.
+export const anziSearchUrl = (siteUrl: string, query: string) => `${siteUrl}/find?q=${encodeURIComponent(query.slice(0, 80))}`
+
 // Name, street address and landmark first, then the Anzi link, then the backup code (the code is how a link-only
 // place is opened in Anzi, but it is never the first thing the reader sees). Anzi needs a real domain (see
 // utils/site.ts); until one is configured the text carries a plain Google Maps link instead.
