@@ -22,6 +22,7 @@ type AdminStreet = {
 }
 type Queue = { waiting: AdminStreet[]; proposed: AdminStreet[] }
 type Point = [number, number]
+type Proposal = { line: Point[]; osmName: string; highway: string; lengthM: number; distanceM: number; sameName: boolean }
 
 const empty = (): GeoJSON.FeatureCollection => ({ type: 'FeatureCollection', features: [] })
 
@@ -43,6 +44,7 @@ export default function AdminTool() {
   const [nameInput, setNameInput] = useState('')
   const [lang, setLang] = useState<'fr' | 'en'>('fr')
   const [officialSource, setOfficialSource] = useState('')
+  const [proposals, setProposals] = useState<Proposal[] | null>(null)
   const mapRef = useRef<MapboxMap | null>(null)
   const container = useRef<HTMLDivElement>(null)
   const draftRef = useRef<Point[]>([])
@@ -137,20 +139,55 @@ export default function AdminTool() {
     setLang(street.lang)
     setOfficialSource('')
     setMessage('')
+    setProposals(null)
+    if (street.lineStatus === 'waiting') autoTrace(street)
     const map = mapRef.current
     map?.flyTo({ center: street.anchor, zoom: 17 })
     const existing = map?.getSource('existing') as GeoJSONSource | undefined
     existing?.setData(street.line ? asLine(street.line) : empty())
   }
 
-  async function saveLine() {
+  // Asks OpenStreetMap for the road next to the street's point; the best proposal is drawn, to be checked.
+  async function autoTrace(street: AdminStreet) {
+    setBusy(true)
+    try {
+      const { ok, data } = await call(`/api/admin/streets/${street.id}/suggest-line`)
+      if (!ok) {
+        setProposals([])
+        setMessage('Auto-trace unavailable (OpenStreetMap did not answer). Click the map to draw by hand.')
+        return
+      }
+      const list = (data.proposals ?? []) as Proposal[]
+      setProposals(list)
+      if (list.length > 0) applyProposal(list[0])
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  function applyProposal(p: Proposal) {
+    draftRef.current = p.line
+    setDraft(p.line)
+    const map = mapRef.current
+    if (map && p.line.length > 0) map.flyTo({ center: p.line[Math.floor(p.line.length / 2)], zoom: 17 })
+  }
+
+  // Saves the line and, in the same click, the decision on the name (accept the proposal, or set the typed one).
+  async function saveLine(withName = false) {
     if (!selected || draft.length < 2) return
     setBusy(true)
     try {
       const { ok, status, data } = await call(`/api/admin/streets/${selected.id}/line`, { line: draft })
       if (!ok) setMessage(status === 400 ? 'Line refused: 2 to 200 points, none farther than 3 km apart.' : `Error ${status}${data?.reason ? ` (${data.reason})` : ''}.`)
       else {
-        setMessage(`Line saved. ${data.numbered} place(s) numbered, ${data.skipped} left waiting (too far from the line).`)
+        let named = ''
+        if (withName) {
+          const name = nameInput.trim()
+          const action = selected.nameStatus === 'proposed' && name === selected.name ? 'accept' : 'set'
+          const res = await call(`/api/admin/streets/${selected.id}/name`, { action, name, lang, officialSource })
+          named = res.ok ? ' Name validated.' : ` Name refused (${res.status}${res.data?.reason ? `, ${res.data.reason}` : ''}): fix it below.`
+        }
+        setMessage(`Line saved. ${data.numbered} place(s) numbered, ${data.skipped} left waiting (too far from the line).${named}`)
         setDraft([])
         setSelected(null)
         await loadQueue()
@@ -208,7 +245,7 @@ export default function AdminTool() {
                     <button className={`w-full rounded px-3 py-2 text-left ${selected?.id === s.id ? 'bg-orange-500 text-gray-900' : 'bg-gray-800'}`} onClick={() => pick(s)}>{label(s)}</button>
                   </li>
                 ))}
-                {queue.waiting.length === 0 && <li className="text-sm text-gray-400">Nothing waiting.</li>}
+                {queue.waiting.length === 0 && <li className="text-sm text-gray-400">Nothing waiting. A street shows up here when someone creates an address on a new street (addresses made before the refactor are not streets).</li>}
               </ul>
             </section>
             <section>
@@ -230,11 +267,33 @@ export default function AdminTool() {
             <h2 className="font-semibold">{label(selected)}</h2>
             {selected.lineStatus === 'waiting' ? (
               <div className="space-y-2">
-                <p className="text-sm text-gray-300">Click the map along the street, in the direction numbers should go up. {draft.length} point(s).</p>
-                <div className="flex gap-2">
+                <p className="text-sm text-gray-300">
+                  {proposals === null ? 'Looking for the road on OpenStreetMap...' : proposals.length > 0 ? 'Orange = proposed line from OpenStreetMap. Check it, fix it by clicking the map, then save.' : 'No road found next to the point: click the map along the street.'}{' '}
+                  Numbers go up in the direction of the line ({draft.length} point(s)).
+                </p>
+                {proposals && proposals.length > 0 && (
+                  <ul className="space-y-1">
+                    {proposals.map((p, i) => (
+                      <li key={i}>
+                        <button className="w-full rounded bg-gray-800 px-3 py-2 text-left text-sm" onClick={() => applyProposal(p)}>
+                          {p.osmName || '(no name)'} · {p.highway} · {p.lengthM} m · {p.distanceM} m away{p.sameName ? ' · same name' : ''}
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+                {proposals && proposals[0]?.osmName && (
+                  <button className={ghost} onClick={() => setNameInput(proposals[0].osmName.slice(0, 24))}>Use name &quot;{proposals[0].osmName}&quot;</button>
+                )}
+                <div className="flex flex-wrap gap-2">
+                  <button className={ghost} disabled={busy} onClick={() => autoTrace(selected)}>Auto-trace</button>
+                  <button className={ghost} disabled={draft.length < 2} onClick={() => setDraft([...draft].reverse())}>Reverse</button>
                   <button className={ghost} disabled={draft.length === 0} onClick={() => setDraft(draft.slice(0, -1))}>Undo</button>
                   <button className={ghost} disabled={draft.length === 0} onClick={() => setDraft([])}>Clear</button>
-                  <button className={button} disabled={busy || draft.length < 2} onClick={saveLine}>Save line</button>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  <button className={button} disabled={busy || draft.length < 2 || nameInput.trim().length < 2} onClick={() => saveLine(true)}>Save line + validate name</button>
+                  <button className={ghost} disabled={busy || draft.length < 2} onClick={() => saveLine(false)}>Save line only</button>
                 </div>
               </div>
             ) : (

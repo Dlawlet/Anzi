@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import Place from "../../../../models/placeModel.js";
 import Street from "../../../../models/streetModel.js";
 import { allow, clientIp, hashIp, sameOrigin } from "../../../../utils/rateLimit.js";
+import { OVERPASS_URL, overpassQuery, proposalsFrom } from "../../../../utils/osmTrace.js";
 import { allocateLabel, nameTakenNearby } from "../../../../utils/streetStore.js";
 import { validateStreetName } from "../../../../utils/streetNames.js";
 import { BASE_FULL, extendLine, validateLine } from "../../../../utils/streetNumbering.js";
@@ -99,6 +100,38 @@ async function numberWaitingPlaces(street) {
     }
     return { numbered, skipped };
 }
+
+// GET /api/admin/streets/[id]/suggest-line : up to 3 OpenStreetMap roads next to the street's point, as drawable lines.
+// Only a proposal: nothing is saved until the moderator saves a line.
+export const suggestStreetLine = async (req, id) => {
+    try {
+        const denied = await guardAdmin(req, false);
+        if (denied) return denied;
+        if (!isValidId(id)) return json({ error: "Invalid id" }, 400);
+        const street = await Street.findOne({ _id: id, status: "live" });
+        if (!street) return json({ error: "Not found" }, 404);
+        if (street.lineStatus !== "waiting") return conflict("line_exists");
+
+        const anchor = adminStreet(street).anchor;
+        let elements;
+        try {
+            const res = await fetch(OVERPASS_URL, {
+                method: "POST",
+                headers: { "Content-Type": "application/x-www-form-urlencoded", "User-Agent": "Anzi/0.1 (street line proposals)" },
+                body: `data=${encodeURIComponent(overpassQuery(anchor))}`,
+                signal: AbortSignal.timeout(9000),
+            });
+            if (!res.ok) return json({ error: "Map service unavailable" }, 502);
+            elements = (await res.json()).elements;
+        } catch {
+            return json({ error: "Map service unavailable" }, 502);
+        }
+        const proposals = proposalsFrom(elements, anchor, street.name).filter((p) => !validateLine(p.line, "moderator").error);
+        return json({ proposals }, 200);
+    } catch (error) {
+        return serverError(error);
+    }
+};
 
 // POST /api/admin/streets/[id]/line { line: [[lng, lat], ...] }
 // First line of a waiting street, or an extension of a used line (only vertices at the ends may be added).

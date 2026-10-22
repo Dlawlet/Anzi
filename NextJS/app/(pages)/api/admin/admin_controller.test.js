@@ -17,7 +17,7 @@ vi.mock("../../../../models/placeModel.js", () => ({ default: { find: m.placeFin
 vi.mock("../../../../models/addressLabelModel.js", () => ({ default: { create: m.labelCreate } }));
 vi.mock("../../../../models/rateLimitModel.js", () => ({ default: { findOneAndUpdate: m.rl } }));
 
-import { getQueue, setStreetLine, setStreetName } from "./admin_controller.js";
+import { getQueue, setStreetLine, setStreetName, suggestStreetLine } from "./admin_controller.js";
 
 const TOKEN = "t".repeat(40);
 const ID = "66f1c0ffee0000000000abcd";
@@ -222,5 +222,38 @@ describe("setStreetName", () => {
     expect((await setStreetName(makeReq({ json: { action: "set", name: "Pharmacie" } }), ID)).status).toBe(400);
     expect((await setStreetName(makeReq({ json: { action: "delete" } }), ID)).status).toBe(400);
     expect((await setStreetName(makeReq({ json: { action: "set", name: "Baobab", lang: "de" } }), ID)).status).toBe(400);
+  });
+});
+
+describe("suggestStreetLine", () => {
+  const road = (name) => ({ type: "way", tags: { highway: "residential", name }, geometry: Array.from({ length: 21 }, (_, i) => ({ lon: ORIGIN[0] + 100 / (M * K), lat: ORIGIN[1] - 100 / M + i * 0.0001 })) });
+
+  it("answers 401 without the token and 404 for an unknown street", async () => {
+    expect((await suggestStreetLine(makeReq({ token: "" }), ID)).status).toBe(401);
+    m.streetFindOne.mockResolvedValue(null);
+    expect((await suggestStreetLine(makeReq(), ID)).status).toBe(404);
+  });
+
+  it("proposes OpenStreetMap roads for a waiting street and saves nothing", async () => {
+    m.streetFindOne.mockResolvedValue(waitingStreet());
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ elements: [road("Rue Manguier")] }) });
+    vi.stubGlobal("fetch", fetchMock);
+    const res = await suggestStreetLine(makeReq(), ID);
+    expect(res.status).toBe(200);
+    const { proposals } = await res.json();
+    expect(proposals).toHaveLength(1);
+    expect(proposals[0]).toMatchObject({ osmName: "Rue Manguier", sameName: true });
+    expect(proposals[0].line.length).toBeGreaterThanOrEqual(2);
+    expect(m.streetFindOneAndUpdate).not.toHaveBeenCalled();
+    vi.unstubAllGlobals();
+  });
+
+  it("refuses a street that already has its line and survives a map outage", async () => {
+    m.streetFindOne.mockResolvedValue(readyStreet());
+    expect((await suggestStreetLine(makeReq(), ID)).status).toBe(409);
+    m.streetFindOne.mockResolvedValue(waitingStreet());
+    vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new Error("timeout")));
+    expect((await suggestStreetLine(makeReq(), ID)).status).toBe(502);
+    vi.unstubAllGlobals();
   });
 });
