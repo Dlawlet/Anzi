@@ -178,7 +178,7 @@ export default function FindFlow({ initialCode }: { initialCode?: string }) {
         )}
 
         {view.kind === 'result' && (
-          <FindResult key={view.hit.key} hit={view.hit} t={t} onBack={view.fromList ? () => setView({ kind: 'list', hits: view.fromList as Hit[], q: view.q }) : undefined} />
+          <FindResult key={view.hit.key} hit={view.hit} t={t} q={view.q} onBack={view.fromList ? () => setView({ kind: 'list', hits: view.fromList as Hit[], q: view.q }) : undefined} />
         )}
 
         {(view.kind === 'idle' || view.kind === 'error') && recent.length > 0 && (

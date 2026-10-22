@@ -47,7 +47,7 @@ function Pin({ view, hit }: { view: MapView; hit: Hit }) {
 
 // The answer to a search (docs/design-2026-10.md 4.3): the map first, with the pin and the number, then the address
 // card. "Y aller" is a secondary action; "Agrandir" opens the live map on the same address.
-export default function FindResult({ hit, t, onBack }: { hit: Hit; t: Dict; onBack?: () => void }) {
+export default function FindResult({ hit, t, q, onBack }: { hit: Hit; t: Dict; q?: string; onBack?: () => void }) {
   const [goOpen, setGoOpen] = useState(false)
   const closeGo = useCallback(() => setGoOpen(false), [])
   const [copied, setCopied] = useState(false)
@@ -57,11 +57,11 @@ export default function FindResult({ hit, t, onBack }: { hit: Hit; t: Dict; onBa
   const title = hitTitle(hit, t.card)
   const line = hitLine(hit, t.card)
   const place = hit.place
-  // A position without a saved place has no code: its link re-runs the street + number search in Anzi, or there is no link.
-  const searchLink =
-    SITE_URL && hit.street?.name && hit.number != null
-      ? anziSearchUrl(SITE_URL, [`${hit.number}${hit.suffix}`, hit.street.name, hit.city].filter(Boolean).join(' '))
-      : ''
+  // A position without a saved place has no code: its link re-runs a search in Anzi (the street + number, else the
+  // search that found it, e.g. an OpenStreetMap result). No link without a public site address.
+  const searchQuery =
+    hit.street?.name && hit.number != null ? [`${hit.number}${hit.suffix}`, hit.street.name, hit.city].filter(Boolean).join(' ') : q?.trim() || line
+  const searchLink = SITE_URL && searchQuery ? anziSearchUrl(SITE_URL, searchQuery) : ''
   const shareText = place ? placeShareText(place, t) : [line, searchLink].filter(Boolean).join('\n')
   const english = hit.street?.lang === 'en'
   const where = placeWhere({ street: hit.place?.street ?? null, quarter: hit.quarter, city: hit.city })
