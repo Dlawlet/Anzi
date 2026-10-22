@@ -52,8 +52,11 @@ describe("share links", () => {
       "Code Anzi: YDE-7K4M",
     ]);
   });
-  it("appends the site link last, only when one is configured", () => {
-    expect(buildShareText(place, labels, "https://anzi.example").endsWith("\nhttps://anzi.example")).toBe(true);
+  it("shares an Anzi link, not a Google Maps one, when a domain is configured", () => {
+    const text = buildShareText(place, labels, "https://anzi.example");
+    expect(text.split("\n")[3]).toBe("https://anzi.example/find?code=YDE-7K4M");
+    expect(text).not.toContain("google.com");
+    expect(buildShareText({ ...place, code: "A B&C" }, labels, "https://anzi.example")).toContain("/find?code=A%20B%26C");
     expect(buildShareText({ ...place, landmark: "" }, labels, null)).not.toContain("Repère");
   });
 });
@@ -62,6 +65,9 @@ describe("publicSiteUrl", () => {
   it("never exposes a vercel.app address", () => {
     expect(publicSiteUrl("https://anzi-abc.vercel.app")).toBeNull();
     expect(publicSiteUrl("https://vercel.app/x")).toBeNull();
+  });
+  it("lets a vercel.app address through only with the temporary override", () => {
+    expect(publicSiteUrl("https://anzi-abc.vercel.app/x", true)).toBe("https://anzi-abc.vercel.app");
   });
   it("accepts a real domain as a bare origin and rejects junk", () => {
     expect(publicSiteUrl("https://anzi.cm/path?x=1")).toBe("https://anzi.cm");

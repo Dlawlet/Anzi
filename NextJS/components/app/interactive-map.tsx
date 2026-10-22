@@ -242,7 +242,14 @@ export default function InteractiveMap({
   // A new search result: move the pin and recentre the map on it.
   useEffect(() => {
     const map = mapRef.current
-    if (!map || !pin || pin === firstPin.current) return
+    if (!map) return
+    // No pin any more (the result card was closed): take the marker off.
+    if (!pin) {
+      markerRef.current?.remove()
+      markerRef.current = null
+      return
+    }
+    if (pin === firstPin.current) return
     markerRef.current?.remove()
     markerRef.current = new mapboxgl.Marker({ element: pinElement(pin.number), anchor: 'bottom' }).setLngLat([pin.lng, pin.lat]).addTo(map)
     map.flyTo({ center: [pin.lng, pin.lat], zoom: Math.max(map.getZoom(), 17), essential: true })

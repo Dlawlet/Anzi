@@ -36,7 +36,12 @@ export function useStreetSuggestions(query: string) {
     setItems([])
     return next
   }
-  return { items, accept }
+  // Closes the list for the current text (a submitted search needs no more suggestions).
+  const dismiss = () => {
+    accepted.current = query.trim()
+    setItems([])
+  }
+  return { items, accept, dismiss }
 }
 
 export function StreetSuggestions({ items, label, onPick }: { items: Suggestion[]; label: string; onPick: (item: Suggestion) => void }) {

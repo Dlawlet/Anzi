@@ -10,8 +10,9 @@ import type { HomeStreet, HomeTag } from '@/utils/homeMap'
 import { hitLine, hitTitle, searchAddress, searchLocal, type Hit } from '@/utils/findClient'
 import { readLocalPlaces } from '@/utils/localPlaces'
 import GoSheet from './go-sheet'
+import { StreetSuggestions, useStreetSuggestions } from './street-suggestions'
 import type { MapPinTarget } from './interactive-map'
-import { CrosshairIcon, ExpandIcon, NavigateIcon, SearchIcon, ShrinkIcon } from './icons'
+import { CloseIcon, CrosshairIcon, ExpandIcon, NavigateIcon, SearchIcon, ShrinkIcon } from './icons'
 import { primaryButton, secondaryButton } from './ui-classes'
 
 function MapLoading() {
@@ -72,6 +73,9 @@ export default function MapCard({
   const [others, setOthers] = useState<Hit[]>([])
   const [mapMessage, setMapMessage] = useState('')
   const [searching, setSearching] = useState(false)
+  const [query, setQuery] = useState('')
+  const searchInput = useRef<HTMLInputElement>(null)
+  const { items: suggestions, accept, dismiss } = useStreetSuggestions(query)
   const [goOpen, setGoOpen] = useState(false)
   const closeGo = useCallback(() => setGoOpen(false), [])
   // "Add an address": tap a house, then start the create flow with that position as the target.
@@ -143,9 +147,8 @@ export default function MapCard({
     setMapMessage('')
   }
 
-  async function search(event: React.FormEvent<HTMLFormElement>) {
-    event.preventDefault()
-    const q = String(new FormData(event.currentTarget).get('q') ?? '').trim()
+  async function runSearch(text: string) {
+    const q = text.trim()
     if (!q || searching) return
     setSearching(true)
     setMapMessage('')
@@ -157,6 +160,21 @@ export default function MapCard({
     if (hits.length > 0) show(hits[0])
     else if (outcome?.status === 'error') setMapMessage(t.find.errors[outcome.reason])
     else setMapMessage(outcome ? t.find.mapNone : t.home.mapOffline)
+  }
+
+  // The cross on the result card: forget the answer and take the pin off the map.
+  function clearResult() {
+    setCurrent(null)
+    setPin(null)
+    setOthers([])
+    setMapMessage('')
+    setGoOpen(false)
+  }
+
+  function search(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    dismiss()
+    void runSearch(query)
   }
 
   const youAt = you ? toPercent(view, you) : null
@@ -177,23 +195,41 @@ export default function MapCard({
                 {t.home.mapClose}
               </button>
               {/* Like a maps app: the search stays on top of the map and answers on the map. */}
-              <form onSubmit={search} role="search" className="flex h-12 min-w-0 flex-1 items-center gap-1 rounded-full bg-white pl-4 pr-1.5 shadow-warm2 md:max-w-md">
-                <input
-                  name="q"
-                  type="search"
-                  required
-                  maxLength={80}
-                  autoComplete="off"
-                  autoCorrect="off"
-                  spellCheck={false}
-                  aria-label={t.home.searchLabel}
-                  placeholder={t.home.searchPlaceholder}
-                  className="min-w-0 flex-1 border-0 bg-transparent p-0 text-[17px] text-night-900 placeholder:text-muted focus:ring-0"
-                />
-                <button type="submit" disabled={searching} aria-label={t.home.searchButton} className="grid h-10 w-10 flex-none place-items-center rounded-full bg-night-900 text-white focus-visible:outline focus-visible:outline-[3px] focus-visible:outline-offset-2 focus-visible:outline-sun disabled:opacity-60">
-                  <SearchIcon className="h-5 w-5" />
-                </button>
-              </form>
+              <div className="relative min-w-0 flex-1 md:max-w-md">
+                <form onSubmit={search} role="search" className="flex h-12 items-center gap-1 rounded-full bg-white pl-4 pr-1.5 shadow-warm2">
+                  <input
+                    ref={searchInput}
+                    name="q"
+                    type="search"
+                    required
+                    maxLength={80}
+                    value={query}
+                    onChange={(e) => setQuery(e.target.value)}
+                    autoComplete="off"
+                    autoCorrect="off"
+                    spellCheck={false}
+                    aria-label={t.home.searchLabel}
+                    placeholder={t.home.searchPlaceholder}
+                    className="min-w-0 flex-1 border-0 bg-transparent p-0 text-[17px] text-night-900 placeholder:text-muted focus:ring-0"
+                  />
+                  <button type="submit" disabled={searching} aria-label={t.home.searchButton} className="grid h-10 w-10 flex-none place-items-center rounded-full bg-night-900 text-white focus-visible:outline focus-visible:outline-[3px] focus-visible:outline-offset-2 focus-visible:outline-sun disabled:opacity-60">
+                    <SearchIcon className="h-5 w-5" />
+                  </button>
+                </form>
+                {/* Suggestions float over the map under the bar; a place is a finished answer, a street waits for its number. */}
+                <div className="absolute inset-x-0 top-full max-h-[50vh] overflow-y-auto rounded-[14px] shadow-warm2">
+                  <StreetSuggestions
+                    items={suggestions}
+                    label={t.home.searchLabel}
+                    onPick={(item) => {
+                      const next = accept(item)
+                      setQuery(next)
+                      if (item.map) void runSearch(next)
+                      else searchInput.current?.focus()
+                    }}
+                  />
+                </div>
+              </div>
             </div>
             <div className={`absolute left-3 z-[1] md:left-4 ${current || mapMessage ? 'bottom-[max(11.5rem,env(safe-area-inset-bottom))]' : 'bottom-[max(0.75rem,env(safe-area-inset-bottom))]'}`}>
               {!adding && (
@@ -220,10 +256,13 @@ export default function MapCard({
               </div>
             )}
             <div className={`absolute inset-x-3 bottom-[max(0.75rem,env(safe-area-inset-bottom))] z-[2] mx-auto max-w-md rounded-3xl bg-white p-3.5 shadow-warm2 ${(current || mapMessage) && !adding ? '' : 'hidden'}`}>
-              <p role="status" className={mapMessage ? 'text-base font-bold text-night-900' : 'sr-only'}>{mapMessage}</p>
+              <button type="button" onClick={clearResult} aria-label={t.go.close} className="absolute right-1.5 top-1.5 grid h-11 w-11 place-items-center rounded-full text-night-900 focus-visible:outline focus-visible:outline-[3px] focus-visible:outline-offset-2 focus-visible:outline-sun">
+                <CloseIcon className="h-6 w-6" />
+              </button>
+              <p role="status" className={mapMessage ? 'pr-10 text-base font-bold text-night-900' : 'sr-only'}>{mapMessage}</p>
               {current && !mapMessage && (
                 <>
-                  <p data-testid="map-result" className="break-words text-[19px] font-extrabold leading-snug text-night-900">{hitTitle(current, t.card)}</p>
+                  <p data-testid="map-result" className="break-words pr-10 text-[19px] font-extrabold leading-snug text-night-900">{hitTitle(current, t.card)}</p>
                   <p className="break-words text-base text-muted">{[current.quarter, current.city].filter(Boolean).join(' · ')}</p>
                   {others.length > 1 && (
                     <ul className="mt-2 flex flex-wrap gap-1.5">

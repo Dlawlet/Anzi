@@ -44,17 +44,20 @@ export const addressTitle = (place: Addressable & { name: string }, tpl: Address
 
 type ShareLabels = AddressTemplates & { code: string; landmark: string }
 
-// Name, street address and landmark first, then the Google Maps link, then the backup code (the code is how a
-// link-only place is opened in Anzi, but it is never the first thing the reader sees). The Anzi link goes last, and
-// only when a real domain is configured (see utils/site.ts).
+// The link a shared address carries: it opens the address in Anzi (/find), whose "Y aller" sheet then hands over
+// to Google Maps, Apple Maps or Waze.
+export const anziPlaceUrl = (siteUrl: string, code: string) => `${siteUrl}/find?code=${encodeURIComponent(code)}`
+
+// Name, street address and landmark first, then the Anzi link, then the backup code (the code is how a link-only
+// place is opened in Anzi, but it is never the first thing the reader sees). Anzi needs a real domain (see
+// utils/site.ts); until one is configured the text carries a plain Google Maps link instead.
 export function buildShareText(place: Shareable, labels: ShareLabels, siteUrl: string | null): string {
   const lines = [
     place.name,
     addressLine(place, labels),
     place.landmark ? `${labels.landmark}: ${place.landmark}` : '',
-    mapsViewUrl(place),
+    siteUrl ? anziPlaceUrl(siteUrl, place.code) : mapsViewUrl(place),
     `${labels.code}: ${place.code}`,
-    siteUrl ?? '',
   ]
   return lines.filter(Boolean).join('\n')
 }

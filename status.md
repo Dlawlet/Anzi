@@ -107,6 +107,12 @@ Anzi: Next.js app where users view a map of addresses (Mapbox), and submit new a
 - Fix (9f84539): the "Ajouter une adresse" button stays visible after a search result (it was hidden, so no other place could be picked). Not tried on a phone.
 - `next build` printed a Next.js security-advisory notice (`next upgrade --agent=security`): look at it before launch.
 
+## Map search suggestions, result card cross, Anzi share link (2026-10-22, owner request)
+- Full-screen map search bar now has the same autocomplete as Home (`useStreetSuggestions`, floating list under the bar; a place runs the search, a street waits for its number). The result card has a cross that clears it and removes the pin (`interactive-map.tsx` removes the marker when `pin` is null). Not tried on a phone.
+- Share text carries an Anzi link `<SITE_URL>/find?code=<CODE>` instead of the Google Maps link (the "Y aller" sheet then hands over to Google/Apple/Waze). Without `SITE_URL` it falls back to the Google link.
+- TEMPORARY: `NEXT_PUBLIC_ALLOW_VERCEL_URL=1` lets a `*.vercel.app` `NEXT_PUBLIC_SITE_URL` through `publicSiteUrl` (contradicts the "no vercel.app in share text" rule). Remove it once the custom domain exists. Set both vars on Vercel and redeploy.
+- Not built: a `/p/[code]` page with a link preview (Open Graph); App Links / TWA to open an installed app directly.
+
 ## Integration smoke test on real Atlas (2026-10-21, night): PASSED
 - Ran the dev server against the real Atlas DB (tagged `city: "ZZTEST"`, sea coordinates; all test data deleted afterwards, DB has 0 streets/places). Verified: create place + new street (waiting), admin queue and line (numbered 1), number issued (33, odd), `/api/places?mine=1`, `/api/find` by code and by "Manguier 33" (same shape for unissued 35), `/api/streets?near=` on a LineString (`$nearSphere` OK, 2dsphere index built), claim with wrong key 404 and right key from a new device, PATCH non-owner 404 / owner OK, private place hidden from name search, cross-origin write 403, admin without token 401. All indexes exist on Atlas (streets, places incl. `manageKeyHash`, addresslabels).
 - Production build (`next start`): all pages 200, security headers present, removed routes `/map`, `/add_address`, `/api/address` answer 404.

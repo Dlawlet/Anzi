@@ -6,7 +6,10 @@ const base = { width: 24, height: 24, viewBox: '0 0 24 24', fill: 'none', stroke
 export const SearchIcon = ({ className }: Props) => (
   <svg {...base} className={className}><circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5" /></svg>
 )
-export const PlusIcon = ({ className }: Props) => (
+export const CloseIcon = ({ className }: Props) => (
+  <svg {...base} className={className}><path d="M18 6 6 18M6 6l12 12" /></svg>
+)
+export const PlusIcon =({ className }: Props) => (
   <svg {...base} className={className}><path d="M12 5v14M5 12h14" /></svg>
 )
 export const ListIcon = ({ className }: Props) => (
