@@ -205,7 +205,7 @@ export default function CreateFlow({ target = null }: { target?: Spot | null }) 
       else if (!inCameroon(fix.lat, fix.lng)) e.location = t.create.where.outside
       else if (fix.accuracyM > GPS_MAX_M) e.location = t.create.where.poor
       else if (away > 0) e.location = fmt(t.create.target.far, { m: away })
-      else if (reading && metresBetween(reading, fix) > MAX_PIN_OFFSET_M) e.location = t.create.where.tooFar
+      else if (!exempt && reading && metresBetween(reading, fix) > MAX_PIN_OFFSET_M) e.location = t.create.where.tooFar
     }
     if (which === 'what') {
       if (!CATEGORIES.includes(form.category)) e.category = t.create.what.categoryError
@@ -303,7 +303,7 @@ export default function CreateFlow({ target = null }: { target?: Spot | null }) 
           lng: fix.lng,
           accuracyM: Math.round(fix.accuracyM),
           pinAdjusted: spot !== null,
-          fix: reading ? { lat: reading.lat, lng: reading.lng } : undefined,
+          fix: reading && !exempt ? { lat: reading.lat, lng: reading.lng } : undefined, // a trusted test IP may be far from the pin
           name: form.name,
           category: form.category,
           city: form.city,
