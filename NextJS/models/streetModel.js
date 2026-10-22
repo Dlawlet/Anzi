@@ -39,6 +39,7 @@ const streetSchema = new Schema(
 
     quarter: { type: String, maxlength: 60, trim: true },
     city: { type: String, required: true, maxlength: 60, trim: true },
+    postalCode: { type: String, match: /^\d{3,6}$/ }, // optional, from the admin's postal-code registry
     region: { type: String, required: true, enum: REGIONS },
 
     placeCount: { type: Number, required: true, min: 0 }, // cache kept with $inc

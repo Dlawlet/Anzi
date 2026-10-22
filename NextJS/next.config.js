@@ -8,7 +8,7 @@ const csp = [
   "style-src 'self' 'unsafe-inline'",
   "img-src 'self' data: blob: https://*.mapbox.com",
   "font-src 'self' data:",
-  "connect-src 'self' https://*.mapbox.com",
+  "connect-src 'self' https://*.mapbox.com https://photon.komoot.io",
   "worker-src 'self' blob:",
   "child-src 'self' blob:",
   'frame-src https://mega.nz',

@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { geocodeText } from './geocode'
+import { geocodeText, photonSearch, searchPlaces } from './geocode'
 
 afterEach(() => {
   vi.unstubAllGlobals()
@@ -41,5 +41,41 @@ describe('geocodeText', () => {
     expect(await geocodeText('manguier')).toEqual([])
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: false }))
     expect(await geocodeText('manguier')).toEqual([])
+  })
+})
+
+const photonAnswer = {
+  features: [
+    { geometry: { coordinates: [11.5, 3.84] }, properties: { name: "Lycée Bilingue d'Etoug-Ebé", district: 'Etoug-Ebé', city: 'Yaoundé', state: 'Centre', osm_type: 'W', osm_id: 42 } },
+    { geometry: { coordinates: [11.5, 3.85] }, properties: { street: 'Rue Antoinette', housenumber: '46', city: 'Yaoundé' } },
+    { geometry: { coordinates: [11.5, 3.85] }, properties: {} },
+  ],
+}
+
+describe('photonSearch', () => {
+  it('maps OpenStreetMap features, keeps the name or street + number, drops empty ones', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true, json: async () => photonAnswer })
+    vi.stubGlobal('fetch', fetchMock)
+    const out = await photonSearch("lycee bilingue d'etoug ebe")
+    expect(out.map((f) => f.title)).toEqual(["Lycée Bilingue d'Etoug-Ebé", '46 Rue Antoinette'])
+    expect(out[0]).toMatchObject({ id: 'osm:W42', city: 'Etoug-Ebé, Yaoundé', lat: 3.84, lng: 11.5 })
+    const url = String(fetchMock.mock.calls[0][0])
+    expect(url).toContain('photon.komoot.io')
+    expect(url).toContain('bbox=')
+  })
+
+  it('searchPlaces uses Mapbox only when OpenStreetMap has nothing', async () => {
+    vi.stubEnv('NEXT_PUBLIC_MAPBOX_TOKEN', 'pk.test')
+    const fetchMock = vi.fn(async (url: string): Promise<unknown> =>
+      url.includes('photon') ? { ok: true, json: async () => ({ features: [] }) } : { ok: true, json: async () => mapboxAnswer }
+    )
+    vi.stubGlobal('fetch', fetchMock)
+    const out = await searchPlaces('rue antoinette')
+    expect(out[0].title).toBe('Rue Antoinette')
+    expect(fetchMock).toHaveBeenCalledTimes(2)
+    fetchMock.mockClear()
+    fetchMock.mockResolvedValue({ ok: true, json: async () => photonAnswer })
+    await searchPlaces('lycee')
+    expect(fetchMock).toHaveBeenCalledTimes(1)
   })
 })

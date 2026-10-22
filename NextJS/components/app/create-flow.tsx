@@ -130,6 +130,12 @@ export default function CreateFlow({ target = null }: { target?: Spot | null }) 
   const [pin, setPin] = useState<Spot | null>(null)
   const [exempt, setExempt] = useState(false)
 
+  // A house picked on the map: no "where are you" screen, the position check starts by itself.
+  const startGpsAtOpen = gps.start
+  useEffect(() => {
+    if (target) startGpsAtOpen()
+  }, [target, startGpsAtOpen])
+
   useEffect(() => {
     if (!target) return
     fetch('/api/presence').then((r) => (r.ok ? r.json() : null)).then((b) => setExempt(Boolean(b?.exempt))).catch(() => {})
@@ -386,7 +392,7 @@ export default function CreateFlow({ target = null }: { target?: Spot | null }) 
 
   const stepNumber = STEPS.indexOf(step) + 1
   const titles: Record<Step, string> = {
-    where: t.create.where.title,
+    where: target ? t.create.target.title : t.create.where.title,
     what: t.create.what.title,
     street: naming ? t.create.street.nameTitle : t.create.street.title,
     details: t.create.details.title,

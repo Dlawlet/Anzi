@@ -20,6 +20,7 @@ type AdminStreet = {
   line: [number, number][] | null
   createdAt: string
 }
+type PostalRow = { city: string; quarter: string; postalCode: string }
 type Queue = { waiting: AdminStreet[]; proposed: AdminStreet[] }
 type Point = [number, number]
 type Proposal = { line: Point[]; osmName: string; highway: string; lengthM: number; distanceM: number; sameName: boolean }
@@ -45,6 +46,10 @@ export default function AdminTool() {
   const [lang, setLang] = useState<'fr' | 'en'>('fr')
   const [officialSource, setOfficialSource] = useState('')
   const [proposals, setProposals] = useState<Proposal[] | null>(null)
+  const [postalList, setPostalList] = useState<PostalRow[]>([])
+  const [pcCity, setPcCity] = useState('')
+  const [pcQuarter, setPcQuarter] = useState('')
+  const [pcCode, setPcCode] = useState('')
   const mapRef = useRef<MapboxMap | null>(null)
   const container = useRef<HTMLDivElement>(null)
   const draftRef = useRef<Point[]>([])
@@ -74,6 +79,23 @@ export default function AdminTool() {
     }
   }
 
+  async function loadPostal() {
+    const { ok, data } = await call('/api/admin/postal')
+    if (ok) setPostalList((data.codes ?? []) as PostalRow[])
+  }
+
+  // Sets (or, with null, removes) the postal code of a city + quarter; live streets of the pair are updated too.
+  async function savePostal(code: string | null) {
+    setBusy(true)
+    try {
+      const { ok, status, data } = await call('/api/admin/postal', { city: pcCity, quarter: pcQuarter, postalCode: code })
+      setMessage(ok ? `Postal code ${code === null ? 'removed' : 'saved'}. ${data.updated} street(s) updated.` : status === 400 ? 'Refused: city 2 to 60 characters, code 3 to 6 digits.' : `Error ${status}.`)
+      if (ok) await loadPostal()
+    } finally {
+      setBusy(false)
+    }
+  }
+
   async function loadQueue() {
     setBusy(true)
     setMessage('')
@@ -85,6 +107,7 @@ export default function AdminTool() {
         return
       }
       setQueue(data as Queue)
+      await loadPostal()
     } finally {
       setBusy(false)
     }
@@ -248,6 +271,32 @@ export default function AdminTool() {
           <button className={ghost} disabled={busy || token.length < 8} onClick={() => trustMyIp(true)}>Test mode: trust my IP (24 h)</button>
           <button className={ghost} disabled={busy || token.length < 8} onClick={() => trustMyIp(false)}>Stop</button>
         </div>
+        {queue && (
+          <section className="space-y-2 rounded border border-gray-700 p-3">
+            <h2 className="font-semibold">Postal codes</h2>
+            <label className="block text-sm" htmlFor="pc-city">City</label>
+            <input id="pc-city" className={`${input} w-full`} value={pcCity} maxLength={60} onChange={(e) => setPcCity(e.target.value)} />
+            <label className="block text-sm" htmlFor="pc-quarter">Quarter (optional, blank = whole city)</label>
+            <input id="pc-quarter" className={`${input} w-full`} value={pcQuarter} maxLength={60} onChange={(e) => setPcQuarter(e.target.value)} />
+            <label className="block text-sm" htmlFor="pc-code">Postal code (3 to 6 digits)</label>
+            <input id="pc-code" className={`${input} w-full`} inputMode="numeric" value={pcCode} maxLength={6} onChange={(e) => setPcCode(e.target.value)} />
+            <div className="flex flex-wrap gap-2">
+              <button className={button} disabled={busy || pcCity.trim().length < 2 || !/^\d{3,6}$/.test(pcCode)} onClick={() => savePostal(pcCode)}>Save</button>
+              <button className={ghost} disabled={busy || pcCity.trim().length < 2} onClick={() => savePostal(null)}>Remove</button>
+              <button className={ghost} disabled={!selected} onClick={() => { setPcCity(selected?.city ?? ''); setPcQuarter(selected?.quarter ?? '') }}>Use selected street</button>
+            </div>
+            <ul className="space-y-1 text-sm">
+              {postalList.map((row) => (
+                <li key={`${row.city}|${row.quarter}`}>
+                  <button className="w-full rounded bg-gray-800 px-3 py-1 text-left" onClick={() => { setPcCity(row.city); setPcQuarter(row.quarter); setPcCode(row.postalCode) }}>
+                    {row.postalCode} · {[row.quarter, row.city].filter(Boolean).join(', ')}
+                  </button>
+                </li>
+              ))}
+              {postalList.length === 0 && <li className="text-gray-400">No postal code yet.</li>}
+            </ul>
+          </section>
+        )}
         {message && <p role="status" className="rounded bg-gray-800 p-3 text-sm">{message}</p>}
 
         {queue && (

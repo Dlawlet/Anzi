@@ -1,7 +1,7 @@
 import { parseQuery } from './addressQuery.js'
 import { nameKey } from './streetNames.js'
 import { addressLine, type AddressTemplates } from './share'
-import { geocodeText, type GeoFeature } from './geocode'
+import { searchPlaces, type GeoFeature } from './geocode'
 import type { PlaceView } from '../types/place'
 
 // What the search box (Find page and the full-screen map) shows for one answer: a street + number, or a place.
@@ -130,8 +130,8 @@ export async function searchAddress(raw: string): Promise<SearchOutcome> {
       const matches = (((await old.json()) as { matches?: LegacyMatch[] }).matches ?? []).map(hitFromLegacy)
       if (matches.length > 0) return { status: 'ok', hits: matches, ambiguous: matches.length > 1 }
     }
-    // Neither Anzi nor the old collection knows it: ask the map (OpenStreetMap), like the old search did.
-    const onMap = (await geocodeText(text)).map(hitFromGeocode)
+    // Neither Anzi nor the old collection knows it: ask OpenStreetMap (then Mapbox), like the old search did.
+    const onMap = (await searchPlaces(text)).map(hitFromGeocode)
     if (onMap.length > 0) return { status: 'ok', hits: onMap, ambiguous: onMap.length > 1 }
     return { status: 'none', type: kind }
   } catch {

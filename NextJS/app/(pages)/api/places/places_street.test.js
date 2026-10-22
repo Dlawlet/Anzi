@@ -12,6 +12,7 @@ const m = vi.hoisted(() => ({
   labelDeleteOne: vi.fn(),
   labelUpdateOne: vi.fn(),
   rl: vi.fn(),
+  postalFind: vi.fn(),
 }));
 
 vi.mock("../../../../models/placeModel.js", () => ({ default: { create: m.placeCreate, findOneAndDelete: m.placeFindOneAndDelete } }));
@@ -23,6 +24,7 @@ vi.mock("../../../../models/streetModel.js", () => ({
 vi.mock("../../../../models/addressLabelModel.js", () => ({
   default: { create: m.labelCreate, deleteOne: m.labelDeleteOne, updateOne: m.labelUpdateOne },
 }));
+vi.mock("../../../../models/postalCodeModel.js", () => ({ default: { find: m.postalFind } }));
 vi.mock("../../../../models/rateLimitModel.js", () => ({ default: { findOneAndUpdate: m.rl } }));
 
 import { DEVICE_COOKIE } from "../../../../utils/deviceToken.js";
@@ -68,6 +70,7 @@ beforeEach(() => {
   vi.spyOn(console, "error").mockImplementation(() => {});
   m.rl.mockResolvedValue({ count: 1 });
   m.streetFind.mockReturnValue(query([]));
+  m.postalFind.mockReturnValue(query([]));
   m.streetUpdateOne.mockResolvedValue({});
   m.labelCreate.mockImplementation(async (doc) => ({ _id: "label-1", ...doc }));
   m.placeCreate.mockImplementation(async (doc) => ({ ...doc, ownerId: "owner-1" }));
@@ -164,6 +167,21 @@ describe("createPlace with a street", () => {
     // The trace starts at x=200 m, the pin is 30 m along on the right: slot 50 + 3 -> 106.
     expect(out.houseNumber).toBe(106);
     expect(res.cookies.get(DEVICE_COOKIE)?.value).toBeTruthy();
+  });
+
+  it("gives a new street the postal code of its quarter, else of its city", async () => {
+    m.postalFind.mockReturnValue(query([{ quarterKey: "", postalCode: "1000" }, { quarterKey: "bastos", postalCode: "1060" }]));
+    await createPlace(makeReq({ json: { ...base, street: { new: { lang: "fr" } } } }));
+    expect(m.postalFind.mock.calls[0][0]).toEqual({ cityKey: "yaounde", quarterKey: { $in: ["bastos", ""] } });
+    expect(m.streetCreate.mock.calls[0][0].postalCode).toBe("1060");
+
+    m.postalFind.mockReturnValue(query([{ quarterKey: "", postalCode: "1000" }]));
+    await createPlace(makeReq({ json: { ...base, street: { new: { lang: "fr" } } } }));
+    expect(m.streetCreate.mock.calls[1][0].postalCode).toBe("1000");
+
+    m.postalFind.mockReturnValue(query([]));
+    await createPlace(makeReq({ json: { ...base, street: { new: { lang: "fr" } } } }));
+    expect(m.streetCreate.mock.calls[2][0].postalCode).toBeUndefined();
   });
 
   it("creates an unnamed street waiting for its line when no trace is sent", async () => {

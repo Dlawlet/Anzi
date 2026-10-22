@@ -4,6 +4,7 @@ import { useState } from 'react'
 import type { Dict } from '@/i18n/dictionary'
 import type { PlaceView } from '@/types/place'
 import { addressCardBlob, saveAddressCard, type CardData } from '@/utils/addressCard'
+import { placeWhere } from '@/utils/share'
 import { BookmarkIcon } from './icons'
 
 export function placeCardData(place: PlaceView, t: Dict): CardData {
@@ -18,7 +19,7 @@ export function placeCardData(place: PlaceView, t: Dict): CardData {
     word: english ? d.streetWordEn : d.streetWord,
     name: place.street?.name || d.unnamedStreet,
     wordAfter: english,
-    where: [place.quarter, place.city].filter(Boolean).join(' · '),
+    where: placeWhere(place),
     placeName: place.name,
     landmarkLabel: t.card.landmark,
     landmark: place.landmark,

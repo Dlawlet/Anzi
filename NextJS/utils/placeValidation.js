@@ -102,6 +102,7 @@ export function publicStreet(street) {
     nameSource: street.nameSource,
     quarter: street.quarter || "",
     city: street.city,
+    postalCode: street.postalCode || "",
   };
 }
 

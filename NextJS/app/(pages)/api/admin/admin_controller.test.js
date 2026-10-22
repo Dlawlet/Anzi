@@ -10,17 +10,24 @@ const m = vi.hoisted(() => ({
   rl: vi.fn(),
   trustedUpsert: vi.fn(),
   trustedDelete: vi.fn(),
+  streetBulkWrite: vi.fn(),
+  postalUpsert: vi.fn(),
+  postalDelete: vi.fn(),
+  postalFind: vi.fn(),
 }));
 
 vi.mock("../../../../models/streetModel.js", () => ({
-  default: { find: m.streetFind, findOne: m.streetFindOne, findOneAndUpdate: m.streetFindOneAndUpdate },
+  default: { find: m.streetFind, findOne: m.streetFindOne, findOneAndUpdate: m.streetFindOneAndUpdate, bulkWrite: m.streetBulkWrite },
+}));
+vi.mock("../../../../models/postalCodeModel.js", () => ({
+  default: { findOneAndUpdate: m.postalUpsert, deleteOne: m.postalDelete, find: m.postalFind },
 }));
 vi.mock("../../../../models/placeModel.js", () => ({ default: { find: m.placeFind, updateOne: m.placeUpdateOne } }));
 vi.mock("../../../../models/addressLabelModel.js", () => ({ default: { create: m.labelCreate } }));
 vi.mock("../../../../models/trustedIpModel.js", () => ({ default: { findOneAndUpdate: m.trustedUpsert, deleteOne: m.trustedDelete } }));
 vi.mock("../../../../models/rateLimitModel.js", () => ({ default: { findOneAndUpdate: m.rl } }));
 
-import { getQueue, setStreetLine, setStreetName, setTrustedIp, suggestStreetLine } from "./admin_controller.js";
+import { getQueue, listPostalCodes, setPostalCode, setStreetLine, setStreetName, setTrustedIp, suggestStreetLine } from "./admin_controller.js";
 
 const TOKEN = "t".repeat(40);
 const ID = "66f1c0ffee0000000000abcd";
@@ -279,5 +286,63 @@ describe("setTrustedIp", () => {
     expect(hours).toBeLessThan(24.1);
     await setTrustedIp(post({ on: false }));
     expect(m.trustedDelete).toHaveBeenCalledWith({ ipHash: filter.ipHash });
+  });
+});
+
+describe("postal codes", () => {
+  const post = (json, extra = {}) => makeReq({ json, headers: { origin: "http://anzi.test", "x-forwarded-for": "9.9.9.9" }, ...extra });
+
+  it("needs the admin token", async () => {
+    expect((await setPostalCode(post({ city: "Yaoundé", postalCode: "1060" }, { token: "" }))).status).toBe(401);
+    expect((await listPostalCodes(makeReq({ token: "" }))).status).toBe(401);
+    expect(m.postalUpsert).not.toHaveBeenCalled();
+  });
+
+  it("answers 400 for a bad city, quarter or code", async () => {
+    for (const body of [{ postalCode: "1060" }, { city: "Y", postalCode: "1060" }, { city: "Yaoundé", postalCode: "12" }, { city: "Yaoundé", postalCode: "1234567" },
+      { city: "Yaoundé", postalCode: 1060 }, { city: "Yaoundé", postalCode: "10a0" }, { city: "Yaoundé" }, { city: "Yaoundé", quarter: 5, postalCode: "1060" }]) {
+      expect((await setPostalCode(post(body))).status, JSON.stringify(body)).toBe(400);
+    }
+    expect((await setPostalCode(makeReq({ headers: { origin: "http://anzi.test" } }))).status).toBe(400);
+    expect(m.postalUpsert).not.toHaveBeenCalled();
+  });
+
+  it("saves the code and copies it to the live streets of that city and quarter only", async () => {
+    m.streetFind.mockReturnValue(query([
+      { _id: "a", city: "Yaoundé", quarter: "Bastos" },
+      { _id: "b", city: "yaounde", quarter: " bastos " },
+      { _id: "c", city: "Yaoundé", quarter: "Mvog-Ada" },
+      { _id: "d", city: "Yaoundé" },
+    ]));
+    const res = await setPostalCode(post({ city: " Yaoundé ", quarter: "Bastos", postalCode: "1060" }));
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual({ updated: 2 });
+    expect(m.postalUpsert.mock.calls[0]).toEqual([
+      { cityKey: "yaounde", quarterKey: "bastos" },
+      { $set: { city: "Yaoundé", quarter: "Bastos", postalCode: "1060" } },
+      { upsert: true },
+    ]);
+    expect(m.streetBulkWrite.mock.calls[0][0].map((op) => op.updateOne)).toEqual([
+      { filter: { _id: "a" }, update: { $set: { postalCode: "1060" } } },
+      { filter: { _id: "b" }, update: { $set: { postalCode: "1060" } } },
+    ]);
+  });
+
+  it("applies a city-wide code to the streets without a quarter and removes a code with null", async () => {
+    m.streetFind.mockReturnValue(query([{ _id: "a", city: "Yaoundé", quarter: "Bastos" }, { _id: "d", city: "Yaoundé" }]));
+    expect(await (await setPostalCode(post({ city: "Yaoundé", postalCode: "1000" }))).json()).toEqual({ updated: 1 });
+    expect(m.postalUpsert.mock.calls[0][0]).toEqual({ cityKey: "yaounde", quarterKey: "" });
+
+    const removed = await setPostalCode(post({ city: "Yaoundé", postalCode: null }));
+    expect(await removed.json()).toEqual({ updated: 1 });
+    expect(m.postalDelete).toHaveBeenCalledWith({ cityKey: "yaounde", quarterKey: "" });
+    expect(m.streetBulkWrite.mock.calls[1][0][0].updateOne.update).toEqual({ $unset: { postalCode: "" } });
+  });
+
+  it("lists the registry", async () => {
+    m.postalFind.mockReturnValue(query([{ city: "Yaoundé", quarter: "Bastos", postalCode: "1060", cityKey: "x" }, { city: "Douala", postalCode: "2000" }]));
+    const res = await listPostalCodes(makeReq());
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual({ codes: [{ city: "Yaoundé", quarter: "Bastos", postalCode: "1060" }, { city: "Douala", quarter: "", postalCode: "2000" }] });
   });
 });

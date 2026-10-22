@@ -2,14 +2,16 @@ import { createHash, timingSafeEqual } from "node:crypto";
 import { NextResponse } from "next/server";
 import Place from "../../../../models/placeModel.js";
 import Street from "../../../../models/streetModel.js";
+import PostalCode from "../../../../models/postalCodeModel.js";
 import TrustedIp from "../../../../models/trustedIpModel.js";
+import { POSTAL_CODE, placeKey } from "../../../../utils/postalCode.js";
 import { allow, clientIp, hashIp, sameOrigin } from "../../../../utils/rateLimit.js";
 import { OVERPASS_URL, overpassQuery, proposalsFrom } from "../../../../utils/osmTrace.js";
 import { allocateLabel, nameTakenNearby } from "../../../../utils/streetStore.js";
 import { validateStreetName } from "../../../../utils/streetNames.js";
 import { BASE_FULL, extendLine, validateLine } from "../../../../utils/streetNumbering.js";
 import { LANGS } from "../../../../utils/streetValidation.js";
-import { isValidId } from "../../../../utils/validate.js";
+import { escapeRegex, isValidId } from "../../../../utils/validate.js";
 
 // Moderator tools: draw street lines, number the waiting places, fix street names.
 // Authorization: Bearer <ADMIN_TOKEN> (server-only secret, at least 32 characters).
@@ -22,6 +24,8 @@ const conflict = (reason) => json({ error: "Conflict", reason }, 409);
 
 const QUEUE_LIMIT = 50;
 const NUMBER_BATCH = 500;
+const POSTAL_LIST_LIMIT = 200;
+const POSTAL_STREET_CAP = 2000;
 
 const digest = (text) => createHash("sha256").update(text).digest();
 
@@ -270,6 +274,49 @@ export const setStreetName = async (req, id) => {
         }
         const renamed = await Street.findOneAndUpdate({ _id: id }, update, { returnDocument: "after" });
         return json({ street: adminStreet(renamed) }, 200);
+    } catch (error) {
+        return serverError(error);
+    }
+};
+
+// GET /api/admin/postal : the registry of postal codes by (city, quarter).
+export const listPostalCodes = async (req) => {
+    try {
+        const denied = await guardAdmin(req, false);
+        if (denied) return denied;
+        const rows = await PostalCode.find({}).sort({ city: 1, quarter: 1 }).limit(POSTAL_LIST_LIMIT);
+        return json({ codes: rows.map((row) => ({ city: row.city, quarter: row.quarter || "", postalCode: row.postalCode })) }, 200);
+    } catch (error) {
+        return serverError(error);
+    }
+};
+
+// POST /api/admin/postal { city, quarter?, postalCode | null } : sets (or removes, with null) the postal code of a
+// city + quarter, and copies it onto the live streets of that pair. A blank quarter is the code of the whole city.
+export const setPostalCode = async (req) => {
+    try {
+        const denied = await guardAdmin(req, true);
+        if (denied) return denied;
+        const body = await readBody(req);
+        const city = typeof body?.city === "string" ? body.city.trim() : "";
+        const quarter = body?.quarter == null ? "" : typeof body.quarter === "string" ? body.quarter.trim() : null;
+        const code = body?.postalCode;
+        if (!body || city.length < 2 || city.length > 60 || quarter === null || quarter.length > 60) return json({ error: "Invalid JSON body" }, 400);
+        if (code !== null && !(typeof code === "string" && POSTAL_CODE.test(code))) return json({ error: "Invalid JSON body" }, 400);
+
+        const cityKey = placeKey(city);
+        const quarterKey = placeKey(quarter);
+        if (code === null) await PostalCode.deleteOne({ cityKey, quarterKey });
+        else await PostalCode.findOneAndUpdate({ cityKey, quarterKey }, { $set: { city, quarter, postalCode: code } }, { upsert: true });
+
+        const candidates = await Street.find({ status: "live", city: new RegExp(`^${escapeRegex(city)}$`, "i") })
+            .select("_id city quarter")
+            .limit(POSTAL_STREET_CAP);
+        const ids = candidates.filter((s) => placeKey(s.city) === cityKey && placeKey(s.quarter) === quarterKey).map((s) => s._id);
+        if (ids.length > 0) {
+            await Street.bulkWrite(ids.map((_id) => ({ updateOne: { filter: { _id }, update: code === null ? { $unset: { postalCode: "" } } : { $set: { postalCode: code } } } })));
+        }
+        return json({ updated: ids.length }, 200);
     } catch (error) {
         return serverError(error);
     }

@@ -99,6 +99,13 @@ Anzi: Next.js app where users view a map of addresses (Mapbox), and submit new a
 - NOT verified in a browser/phone: dragging, the add mode on the real GL map, the gate. Unit tests, tsc, lint, build pass.
 - Owner note (2026-10-22): "rue + numéro" is the SHORT address; the full one looks like `46 Rue Antoinette 1060 Yaoundé VI` (number, street, postal code, town + arrondissement). Not built: no postal-code field in `Place`/`Street`; decision pending (optional `postalCode` per quarter set by the admin, shown in the full address line and card).
 
+## Suggestions via OSM, map controls, postal code (2026-10-22)
+- Suggestions: sources run in parallel and show as they answer (Anzi streets, old addresses, OpenStreetMap via Photon `photon.komoot.io` with Cameroon bbox, Mapbox only if OSM is empty; 4-5 s timeouts, cache). CSP `connect-src` now allows Photon. Search fallback (`searchPlaces`) uses the same order. Photon is a public fair-use service: self-host if traffic grows.
+- Create from the map: the "where are you" screen is skipped (GPS check starts by itself, title "Est-ce la bonne maison ?").
+- Full-screen map: "my position" (GeolocateControl) and base-map switcher (Plan, Satellite, Relief, Clair); layers re-added on `style.load`.
+- Postal code per quarter (subagent): `PostalCode` registry, `Street.postalCode`, `POST/GET /api/admin/postal` + admin section, inherited by new streets, shown in the FULL line "12 Rue Manguier, Bastos, 1060 Yaoundé" (`utils/share.ts` `addressLine`, `placeWhere`). TODO: `hitLine` in `utils/findClient.ts` and the map-card line do not show it yet. 253 tests, tsc, lint, build pass; nothing tried in a browser.
+- `next build` printed a Next.js security-advisory notice (`next upgrade --agent=security`): look at it before launch.
+
 ## Integration smoke test on real Atlas (2026-10-21, night): PASSED
 - Ran the dev server against the real Atlas DB (tagged `city: "ZZTEST"`, sea coordinates; all test data deleted afterwards, DB has 0 streets/places). Verified: create place + new street (waiting), admin queue and line (numbered 1), number issued (33, odd), `/api/places?mine=1`, `/api/find` by code and by "Manguier 33" (same shape for unissued 35), `/api/streets?near=` on a LineString (`$nearSphere` OK, 2dsphere index built), claim with wrong key 404 and right key from a new device, PATCH non-owner 404 / owner OK, private place hidden from name search, cross-origin write 403, admin without token 401. All indexes exist on Atlas (streets, places incl. `manageKeyHash`, addresslabels).
 - Production build (`next start`): all pages 200, security headers present, removed routes `/map`, `/add_address`, `/api/address` answer 404.

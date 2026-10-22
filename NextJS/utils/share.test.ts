@@ -4,7 +4,7 @@ import { fmt, resolveLang } from "../i18n/lang";
 import { regionForCity } from "./cities";
 import { gpsQuality, inCameroon } from "./gps";
 import { REGIONS } from "./placeValidation.js";
-import { addressLine, buildShareText, mapsNavigateUrl, mapsViewUrl, whatsappUrl } from "./share";
+import { addressLine, buildShareText, mapsNavigateUrl, mapsViewUrl, placeWhere, whatsappUrl } from "./share";
 import { publicSiteUrl } from "./site";
 
 const place = {
@@ -32,6 +32,15 @@ describe("share links", () => {
     expect(addressLine({ ...place, street: { name: "" } }, tpl)).toBe("12, rue sans nom, Bastos, Yaoundé");
     expect(addressLine({ ...place, street: null, houseNumber: null, officialNumber: "7" }, tpl)).toBe("N° 7, Bastos, Yaoundé");
     expect(addressLine({ street: null, houseNumber: null, houseSuffix: "", officialNumber: "", quarter: "", city: "Douala" }, tpl)).toBe("Douala");
+  });
+  it("adds the postal code to the full line only, between the quarter and the town", () => {
+    const coded = { ...place, street: { name: "Manguier", postalCode: "1060" } };
+    expect(addressLine(coded, tpl)).toBe("12 Rue Manguier, Bastos, 1060 Yaoundé");
+    expect(addressLine({ ...coded, quarter: "", city: "" }, tpl)).toBe("12 Rue Manguier");
+    expect(addressLine({ ...coded, street: { name: "Manguier", postalCode: "" } }, tpl)).toBe("12 Rue Manguier, Bastos, Yaoundé");
+    expect(placeWhere(coded)).toBe("Bastos · 1060 Yaoundé");
+    expect(placeWhere(place)).toBe("Bastos · Yaoundé");
+    expect(buildShareText(coded, labels, null).split("\n")[1]).toBe("12 Rue Manguier, Bastos, 1060 Yaoundé");
   });
   it("leads with name, address and landmark; the backup code is never the first line", () => {
     const text = buildShareText(place, labels, null);

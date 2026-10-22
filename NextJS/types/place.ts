@@ -6,6 +6,7 @@ export type PlaceStreet = {
   nameSource: 'community' | 'osm' | 'official'
   quarter: string
   city: string
+  postalCode?: string
 }
 
 // Shape returned by /api/places (see publicPlace() in utils/placeValidation.js) plus the owner flag.

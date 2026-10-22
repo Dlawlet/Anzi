@@ -63,6 +63,11 @@ describe("publicPlace with a street", () => {
     for (const hidden of ["secret", "alongM", "offsetM", "pinAdjusted", "ownerId"]) expect(body).not.toContain(hidden);
   });
 
+  it("exposes the postal code of the street, empty when there is none", () => {
+    expect(publicPlace(place, { ...street, postalCode: "1060" }).street.postalCode).toBe("1060");
+    expect(publicPlace(place, street).street.postalCode).toBe("");
+  });
+
   it("hides a number that is not issued", () => {
     expect(publicPlace({ ...place, numberStatus: "waiting" }, street)).toMatchObject({ houseNumber: null, side: null, numberStatus: "waiting" });
     expect(publicPlace({ ...place, numberStatus: undefined, houseNumber: undefined }).numberStatus).toBe("none");

@@ -5,7 +5,7 @@ import Link from 'next/link'
 import type { Dict } from '@/i18n/dictionary'
 import { fmt } from '@/i18n/lang'
 import { hitLine, hitTitle, type Hit } from '@/utils/findClient'
-import { whatsappUrl } from '@/utils/share'
+import { placeWhere, whatsappUrl } from '@/utils/share'
 import { staticMapUrl, type MapView } from '@/utils/staticMap'
 import AddressPlate from './address-plate'
 import GoSheet from './go-sheet'
@@ -58,7 +58,7 @@ export default function FindResult({ hit, t, onBack }: { hit: Hit; t: Dict; onBa
   const place = hit.place
   const shareText = place ? placeShareText(place, t) : ''
   const english = hit.street?.lang === 'en'
-  const where = [hit.quarter, hit.city].filter(Boolean).join(' · ')
+  const where = placeWhere({ street: hit.place?.street ?? null, quarter: hit.quarter, city: hit.city })
   const category = place ? (t.categories as Record<string, string>)[place.category] : undefined
   const named = Boolean(hit.street?.name)
 

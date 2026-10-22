@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { completeWith, fetchSuggestions, shouldSuggest, type Suggestion } from '@/utils/suggestClient'
 
-const DELAY_MS = 250
+const DELAY_MS = 200
 
 // Street names that start like the typed text. The list sits inline under the box (not a floating layer), so it
 // never hides what is below on small phones. One request per pause in typing, none for short text.
@@ -19,7 +19,7 @@ export function useStreetSuggestions(query: string) {
     }
     const controller = new AbortController()
     const timer = setTimeout(() => {
-      fetchSuggestions(text, controller.signal).then((list) => {
+      fetchSuggestions(text, controller.signal, (list) => {
         if (!controller.signal.aborted) setItems(list)
       })
     }, DELAY_MS)

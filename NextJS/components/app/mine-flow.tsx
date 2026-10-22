@@ -5,7 +5,7 @@ import Link from 'next/link'
 import { useI18n } from '@/i18n/provider'
 import type { Dict } from '@/i18n/dictionary'
 import { readLocalPlaces, removeLocalPlace, replaceLocalPlaces, saveLocalPlace } from '@/utils/localPlaces'
-import { addressTitle } from '@/utils/share'
+import { addressTitle, placeWhere } from '@/utils/share'
 import type { PlaceView } from '@/types/place'
 import AddressPlate from './address-plate'
 import { CategoryIcon, ChevronIcon } from './icons'
@@ -145,7 +145,7 @@ function Details(props: {
   const [confirming, setConfirming] = useState(false)
   const [busy, setBusy] = useState(false)
   const english = place.street?.lang === 'en'
-  const where = [place.quarter, place.city].filter(Boolean).join(' · ')
+  const where = placeWhere(place)
 
   async function setVisibility(visibility: Visibility) {
     if (busy || visibility === place.visibility) return

@@ -10,7 +10,7 @@ import PlaceActions from './place-actions'
 import SaveCardButton from './save-card-button'
 import ShareButton, { placeShareText } from './share-button'
 import { CategoryIcon } from './icons'
-import { addressLine } from '@/utils/share'
+import { addressLine, placeWhere } from '@/utils/share'
 
 // Success screen: dark, with the address card (logo, orange plate, quarter and city, landmark). The card never shows
 // the Anzi code, a site URL or a QR (CLAUDE.md); the code only travels inside the WhatsApp text for now.
@@ -26,7 +26,7 @@ export default function CreateDone(props: {
   const number = place.houseNumber != null ? `${place.houseNumber}${place.houseSuffix}` : null
   const streetName = place.street?.name || d.unnamedStreet
   const english = place.street?.lang === 'en'
-  const where = [place.quarter, place.city].filter(Boolean).join(' · ')
+  const where = placeWhere(place)
   const category = (t.categories as Record<string, string>)[place.category]
 
   return (

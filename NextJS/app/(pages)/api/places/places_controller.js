@@ -7,6 +7,7 @@ import { DEVICE_COOKIE, deviceCookieOptions, newDeviceToken, verifyDeviceToken }
 import { formatManageKey, generateManageKey, hashManageKey, normalizeManageKey } from "../../../../utils/manageKey.js";
 import { generateCode, normalizeCode } from "../../../../utils/placeCode.js";
 import { CONSENT_VERSION, publicPlace, publicStreet, validateNewPlace, validatePlacePatch } from "../../../../utils/placeValidation.js";
+import { inheritedPostalCode } from "../../../../utils/postalCode.js";
 import { allow, clientIp, hashIp, sameOrigin } from "../../../../utils/rateLimit.js";
 import { allocateLabel, nameTakenNearby, nearbyStreets, streetsById } from "../../../../utils/streetStore.js";
 import { MAX_BEYOND_M, distanceM, idealNumber, orientTrace, project } from "../../../../utils/streetNumbering.js";
@@ -96,6 +97,7 @@ async function resolveStreet(request, value, deviceId, req) {
         lengthM: line ? request.lengthM : undefined,
         quarter: value.quarter || undefined,
         city: value.city,
+        postalCode: (await inheritedPostalCode(value.city, value.quarter)) || undefined,
         region: value.region,
         placeCount: 0,
         firstOwnerId: deviceId,
