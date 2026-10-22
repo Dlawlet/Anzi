@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useI18n } from '@/i18n/provider'
 import { fmt } from '@/i18n/lang'
 import type { Dict } from '@/i18n/dictionary'
@@ -8,6 +8,7 @@ import { hitLine, hitTitle, searchAddress, searchLocal, type Hit } from '@/utils
 import { readLocalPlaces } from '@/utils/localPlaces'
 import { addRecent, clearRecent, readRecent, type Recent } from '@/utils/recentLocal'
 import FindResult from './find-result'
+import { StreetSuggestions, useStreetSuggestions } from './street-suggestions'
 import { ChevronIcon, SearchIcon } from './icons'
 import { inputClass, linkButton, primaryButton } from './ui-classes'
 
@@ -42,6 +43,8 @@ async function run(raw: string, t: Dict): Promise<View> {
 export default function FindFlow({ initialCode }: { initialCode?: string }) {
   const { t } = useI18n()
   const [query, setQuery] = useState(initialCode ?? '')
+  const input = useRef<HTMLInputElement>(null)
+  const { items, accept } = useStreetSuggestions(query)
   const [view, setView] = useState<View>(initialCode ? { kind: 'loading' } : { kind: 'idle' })
   const [recent, setRecent] = useState<Recent[]>([])
 
@@ -105,6 +108,7 @@ export default function FindFlow({ initialCode }: { initialCode?: string }) {
         <div>
           <label htmlFor="q" className="mb-1 block text-base font-bold">{t.find.label}</label>
           <input
+            ref={input}
             id="q"
             type="text"
             inputMode="text"
@@ -116,6 +120,14 @@ export default function FindFlow({ initialCode }: { initialCode?: string }) {
             onChange={(e) => setQuery(e.target.value)}
             aria-describedby="q-hint"
             className={inputClass(view.kind === 'error')}
+          />
+          <StreetSuggestions
+            items={items}
+            label={t.find.label}
+            onPick={(item) => {
+              setQuery(accept(item))
+              input.current?.focus()
+            }}
           />
           <p id="q-hint" className="mt-1 text-base text-muted">{t.find.hint}</p>
         </div>

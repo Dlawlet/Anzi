@@ -1,9 +1,17 @@
-import { getI18n } from '@/i18n/server'
-import { SearchIcon } from './icons'
+'use client'
 
-// One box, a plain GET form to /find: no client JS. "Manguier 12", street and number, or the backup code.
-export default async function AddressSearchBox({ defaultValue }: { defaultValue?: string }) {
-  const { t } = await getI18n()
+import { useRef, useState } from 'react'
+import { useI18n } from '@/i18n/provider'
+import { SearchIcon } from './icons'
+import { StreetSuggestions, useStreetSuggestions } from './street-suggestions'
+
+// One box, a plain GET form to /find. "Manguier 12", street and number, or the backup code. Street names are
+// completed as you type; the form still works without JavaScript.
+export default function AddressSearchBox({ defaultValue }: { defaultValue?: string }) {
+  const { t } = useI18n()
+  const [value, setValue] = useState(defaultValue ?? '')
+  const input = useRef<HTMLInputElement>(null)
+  const { items, accept } = useStreetSuggestions(value)
   return (
     <form action="/find" method="get" className="px-3.5 pb-4 pt-3.5">
       <label htmlFor="home-q" className="mb-2 flex items-center gap-2 text-base font-bold">
@@ -12,12 +20,14 @@ export default async function AddressSearchBox({ defaultValue }: { defaultValue?
       </label>
       <div className="field-box">
         <input
+          ref={input}
           id="home-q"
           name="q"
           type="text"
           required
           maxLength={80}
-          defaultValue={defaultValue}
+          value={value}
+          onChange={(e) => setValue(e.target.value)}
           autoComplete="off"
           autoCorrect="off"
           spellCheck={false}
@@ -28,6 +38,14 @@ export default async function AddressSearchBox({ defaultValue }: { defaultValue?
           {t.home.searchButton}
         </button>
       </div>
+      <StreetSuggestions
+        items={items}
+        label={t.home.searchLabel}
+        onPick={(item) => {
+          setValue(accept(item))
+          input.current?.focus()
+        }}
+      />
       <p className="mt-1.5 text-[15px] text-muted">{t.home.searchHelp}</p>
     </form>
   )

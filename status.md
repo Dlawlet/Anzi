@@ -83,7 +83,7 @@ Anzi: Next.js app where users view a map of addresses (Mapbox), and submit new a
 
 ## Vercel build fix (2026-10-22)
 - Vercel built the branch with yarn (tracked `yarn.lock`, stale) and `next build` died with `Cannot find module 'postcss-import'` (reproduced in a clean copy; yarn installed tailwindcss 3.3.2 without it, npm ci gives 3.4.19). Fix: `NextJS/vercel.json` with `installCommand: "npm ci"`. A clean `npm ci` + `next build` with no env vars passes (16 routes). `yarn.lock` is still tracked and stale: delete it later (owner decision). Not committed yet.
-- Search has no autocomplete: the Home/find/full-screen map boxes submit on Enter/button only (`autoComplete="off"`); only the city field in `/create` has a `<datalist>`.
+- Street-name autocomplete (owner asked, 2026-10-22): new read-only `GET /api/find/suggest?q=` (street names only, live + drawn, prefix on `nameKey`, 6 max, 120/min/IP, 7 tests) feeding an inline list under the Home box and the `/find` box (`components/app/street-suggestions.tsx`, `utils/suggestClient.ts`, debounce 250 ms, 2 letters min, not for backup codes; picking fills "Manguier " and keeps a typed number). Home box is now a client component (form still works without JS). Not added to the full-screen map box (uncontrolled input). Never run against real streets (the DB has none): only unit tests, tsc, lint, build. Place names are not suggested.
 - afidipro partnership (owner, 2026-10-22): first phase is only a redirect from their site to Anzi, no coupling, no API; re-evaluate later. So no partner API key or interface work now.
 - Leftover test copies `D:\anzi-vtest2`, `D:\anzi-vtest3` (and `D:\anzi-smoke`): delete by hand (removal is blocked for me).
 
