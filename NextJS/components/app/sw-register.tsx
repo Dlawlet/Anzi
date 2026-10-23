@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect } from 'react'
+import '@/utils/installPrompt' // starts listening for the install event on every app screen
 
 // Registers the service worker in production only (it would get in the way of hot reload).
 export default function SwRegister() {

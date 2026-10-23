@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { getI18n } from '@/i18n/server'
 import Logo from './logo'
+import InstallButton from './install-button'
 import LangToggle from './lang-toggle'
 import TopNav from './top-nav'
 
@@ -16,7 +17,10 @@ export default async function AppBar({ variant = 'light' }: { variant?: 'dark' |
         {t.brand}
       </Link>
       <TopNav dark={dark} />
-      <LangToggle dark={dark} />
+      <div className="flex items-center gap-2">
+        <InstallButton dark={dark} />
+        <LangToggle dark={dark} />
+      </div>
       </div>
     </header>
   )
