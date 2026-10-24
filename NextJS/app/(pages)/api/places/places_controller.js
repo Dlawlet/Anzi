@@ -6,10 +6,10 @@ import Street from "../../../../models/streetModel.js";
 import { DEVICE_COOKIE, deviceCookieOptions, newDeviceToken, verifyDeviceToken } from "../../../../utils/deviceToken.js";
 import { formatManageKey, generateManageKey, hashManageKey, normalizeManageKey } from "../../../../utils/manageKey.js";
 import { generateCode, normalizeCode } from "../../../../utils/placeCode.js";
-import { CONSENT_VERSION, publicPlace, publicStreet, validateNewPlace, validatePlacePatch } from "../../../../utils/placeValidation.js";
+import { CONSENT_VERSION, ownerPlace, publicPlace, publicStreet, validateNewPlace, validatePlacePatch } from "../../../../utils/placeValidation.js";
 import { inheritedPostalCode } from "../../../../utils/postalCode.js";
 import { allow, clientIp, hashIp, sameOrigin } from "../../../../utils/rateLimit.js";
-import { allocateLabel, nameTakenNearby, nearbyStreets, streetsById } from "../../../../utils/streetStore.js";
+import { allocateLabel, nameTakenNearby, nearbyStreets, retireLabel, streetsById } from "../../../../utils/streetStore.js";
 import { MAX_BEYOND_M, distanceM, idealNumber, orientTrace, project } from "../../../../utils/streetNumbering.js";
 import { validateStreetInput } from "../../../../utils/streetValidation.js";
 import { cleanSearch, escapeRegex } from "../../../../utils/validate.js";
@@ -17,7 +17,6 @@ import { cleanSearch, escapeRegex } from "../../../../utils/validate.js";
 const NEARBY_STREET_M = 150; // streets considered when a new one is drawn
 const DUPLICATE_STREET_M = 25; // a new street this close to an existing line is probably the same street
 const WAITING_RADIUS_M = 200; // a place joins a street still waiting for its line only this near the anchor
-const ACCEPT_AT_PLACES = 5; // houses on a street that make its proposed name final
 
 const json = (body, status) => NextResponse.json(body, { status });
 const serverError = (error) => {
@@ -189,7 +188,7 @@ export const createPlace = async (req) => {
                         consentAt: new Date(),
                         consentVersion: CONSENT_VERSION,
                         adultOrParentOk: true,
-                        status: "live",
+                        status: "pending", // the admin approves it before anybody else can find it
                         ownerId: deviceId,
                         manageKeyHash: hashManageKey(manageKey),
                     });
@@ -203,9 +202,8 @@ export const createPlace = async (req) => {
         }
         if (!place) return json({ error: "Could not allocate a code, try again" }, 503);
 
-        if (street) await countPlace(street);
-
-        const response = json({ ...publicPlace(place, street), isOwner: true, manageKey: formatManageKey(manageKey) }, 201);
+        // The street counts the place once the admin approves it (admin_controller.js reviewPlace).
+        const response = json({ ...ownerPlace(place, street), manageKey: formatManageKey(manageKey) }, 201);
         if (newToken) response.cookies.set(DEVICE_COOKIE, newToken, deviceCookieOptions());
         return response;
     } catch (error) {
@@ -223,33 +221,19 @@ async function undoCreate(label, street) {
     }
 }
 
-// The place is already stored: a failed counter must not turn the request into an error.
-async function countPlace(street) {
-    try {
-        await Street.updateOne({ _id: street._id }, { $inc: { placeCount: 1 } });
-        // A street with five houses keeps the name its first registrant proposed.
-        await Street.updateOne(
-            { _id: street._id, nameStatus: "proposed", nameSource: "community", placeCount: { $gte: ACCEPT_AT_PLACES } },
-            { $set: { nameStatus: "accepted" } }
-        );
-    } catch (error) {
-        console.error(error);
-    }
-}
-
 export const getPlaceByCode = async (req, rawCode) => {
     try {
         const code = normalizeCode(rawCode);
         if (!code) return json({ error: "Invalid code" }, 400);
         if (!(await allow("lookup-ip", hashIp(clientIp(req)), 60, 60))) return json({ error: "Too many requests" }, 429);
 
-        const place = await Place.findOne({ code, status: "live" });
+        const place = await Place.findOne({ code, status: { $in: ["live", "pending", "refused"] } });
         const deviceId = deviceIdFrom(req);
         const isOwner = Boolean(place && deviceId && place.ownerId === deviceId);
-        // Private places look exactly like missing ones to everybody but the owner.
-        if (!place || (place.visibility === "private" && !isOwner)) return json({ error: "Not found" }, 404);
-        const streets = await streetsById([place]);
-        return json({ ...publicPlace(place, streets.get(String(place.streetId))), isOwner }, 200);
+        // Private, pending and refused places look exactly like missing ones to everybody but the owner.
+        if (!place || ((place.visibility === "private" || place.status !== "live") && !isOwner)) return json({ error: "Not found" }, 404);
+        const street = (await streetsById([place])).get(String(place.streetId));
+        return json(isOwner ? ownerPlace(place, street) : { ...publicPlace(place, street), isOwner }, 200);
     } catch (error) {
         return serverError(error);
     }
@@ -264,7 +248,7 @@ export const listPlaces = async (req) => {
             if (!deviceId) return json({ places: [] }, 200);
             const places = await Place.find({ ownerId: deviceId }).sort({ createdAt: -1 }).limit(50);
             const streets = await streetsById(places);
-            return json({ places: places.map((p) => ({ ...publicPlace(p, streets.get(String(p.streetId))), isOwner: true })) }, 200);
+            return json({ places: places.map((p) => ownerPlace(p, streets.get(String(p.streetId)))) }, 200);
         }
 
         const search = cleanSearch(params.get("search"));
@@ -298,13 +282,13 @@ export const updatePlace = async (req, rawCode) => {
         if (errors.length > 0) return json({ error: "Invalid data", fields: errors }, 400);
 
         const place = await Place.findOneAndUpdate(
-            { code, ownerId: deviceId, status: { $ne: "hidden" } },
+            { code, ownerId: deviceId, status: { $in: ["live", "pending"] } },
             { $set: value },
             { returnDocument: "after", runValidators: true }
         );
         if (!place) return json({ error: "Not found" }, 404);
         const streets = await streetsById([place]);
-        return json({ ...publicPlace(place, streets.get(String(place.streetId))), isOwner: true }, 200);
+        return json(ownerPlace(place, streets.get(String(place.streetId))), 200);
     } catch (error) {
         if (error?.name === "ValidationError") return json({ error: "Invalid data" }, 400);
         return serverError(error);
@@ -332,7 +316,7 @@ export const claimPlace = async (req) => {
         await Place.updateOne({ _id: place._id }, { $set: { ownerId: deviceId } });
 
         const streets = await streetsById([place]);
-        const response = json({ ...publicPlace(place, streets.get(String(place.streetId))), isOwner: true }, 200);
+        const response = json(ownerPlace(place, streets.get(String(place.streetId))), 200);
         if (newToken) response.cookies.set(DEVICE_COOKIE, newToken, deviceCookieOptions());
         return response;
     } catch (error) {
@@ -350,20 +334,9 @@ export const deletePlace = async (req, rawCode) => {
         if (!deviceId) return json({ error: "Not found" }, 404);
         const place = await Place.findOneAndDelete({ code, ownerId: deviceId });
         if (!place) return json({ error: "Not found" }, 404);
-        await retireLabel(place);
+        await retireLabel(place, place.status === "live");
         return json({ deleted: true }, 200);
     } catch (error) {
         return serverError(error);
     }
 };
-
-// The label of a deleted place is retired, never reused; the street's counter goes down.
-async function retireLabel(place) {
-    if (!place.streetId) return;
-    try {
-        await AddressLabel.updateOne({ placeId: place._id }, { $set: { state: "retired" }, $unset: { placeId: "" } });
-        await Street.updateOne({ _id: place.streetId, placeCount: { $gt: 0 } }, { $inc: { placeCount: -1 } });
-    } catch (error) {
-        console.error(error);
-    }
-}

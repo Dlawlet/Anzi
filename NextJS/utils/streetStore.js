@@ -53,3 +53,30 @@ export async function streetsById(places) {
   const streets = await Street.find({ _id: { $in: ids } });
   return new Map(streets.map((street) => [String(street._id), street]));
 }
+
+const ACCEPT_AT_PLACES = 5; // approved houses on a street that make its proposed name final
+
+// An approved place counts on its street. The place is already stored: a failed counter must not fail the request.
+export async function countPlace(streetId) {
+  try {
+    await Street.updateOne({ _id: streetId }, { $inc: { placeCount: 1 } });
+    // A street with five houses keeps the name its first registrant proposed.
+    await Street.updateOne(
+      { _id: streetId, nameStatus: "proposed", nameSource: "community", placeCount: { $gte: ACCEPT_AT_PLACES } },
+      { $set: { nameStatus: "accepted" } }
+    );
+  } catch (error) {
+    console.error(error);
+  }
+}
+
+// The label of a deleted or refused place is retired, never reused. Only a place that was counted (live) uncounts.
+export async function retireLabel(place, counted) {
+  if (!place.streetId) return;
+  try {
+    await AddressLabel.updateOne({ placeId: place._id }, { $set: { state: "retired" }, $unset: { placeId: "" } });
+    if (counted) await Street.updateOne({ _id: place.streetId, placeCount: { $gt: 0 } }, { $inc: { placeCount: -1 } });
+  } catch (error) {
+    console.error(error);
+  }
+}

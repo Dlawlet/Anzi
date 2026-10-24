@@ -1,5 +1,5 @@
 import { Schema, model, models } from "mongoose";
-import { CATEGORIES, REGIONS, VISIBILITIES } from "../utils/placeValidation.js";
+import { CATEGORIES, NAME_REFUSAL_REASONS, PLACE_STATUSES, REFUSAL_REASONS, REGIONS, VISIBILITIES } from "../utils/placeValidation.js";
 import { SUFFIX_RE } from "../utils/streetNumbering.js";
 
 // Phase 1 Place (docs/refresh-plan.md section 2). Contact phone arrives in a later slice.
@@ -31,7 +31,20 @@ const placeSchema = new Schema(
     consentAt: { type: Date, required: true },
     consentVersion: { type: String, required: true },
     adultOrParentOk: { type: Boolean, required: true },
-    status: { type: String, required: true, enum: ["live", "pending", "hidden"] },
+    // pending = waits for the admin, only its owner sees it; refused = the owner sees why (review).
+    status: { type: String, required: true, enum: PLACE_STATUSES },
+    review: {
+      reason: { type: String, enum: REFUSAL_REASONS },
+      note: { type: String, maxlength: 200 },
+      at: { type: Date },
+    },
+    // Set when the admin removed the street name this owner proposed; cleared once the street gets a name.
+    nameNotice: {
+      name: { type: String, maxlength: 40 },
+      reason: { type: String, enum: NAME_REFUSAL_REASONS },
+      note: { type: String, maxlength: 200 },
+      at: { type: Date },
+    },
     ownerId: { type: String, required: true, index: true },
     // SHA-256 of the management key shown once at creation (utils/manageKey.js); it finds the place on "claim".
     // Never returned, never selected by default.
@@ -44,5 +57,6 @@ placeSchema.index({ location: "2dsphere" });
 placeSchema.index({ visibility: 1, status: 1, name: 1 });
 placeSchema.index({ streetId: 1, visibility: 1, status: 1, houseNumber: 1 });
 placeSchema.index({ streetId: 1, numberStatus: 1, createdAt: 1 });
+placeSchema.index({ status: 1, createdAt: 1 }); // admin review queue
 
 export default models.Place || model("Place", placeSchema);

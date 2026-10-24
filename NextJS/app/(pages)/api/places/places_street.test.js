@@ -89,7 +89,9 @@ describe("createPlace with a street", () => {
     const doc = m.placeCreate.mock.calls[0][0];
     expect(doc).toMatchObject({ streetId: readyStreet()._id, houseNumber: 56, numberStatus: "issued" });
     expect(m.labelCreate.mock.calls[0][0]).toMatchObject({ streetId: STREET_ID, houseNumber: 56, houseSuffix: "", state: "active", placeId: doc._id });
-    expect(m.streetUpdateOne.mock.calls[0][1]).toEqual({ $inc: { placeCount: 1 } });
+    // Pending until the admin approves it: the street does not count it yet.
+    expect(doc.status).toBe("pending");
+    expect(m.streetUpdateOne).not.toHaveBeenCalled();
   });
 
   it("falls back to the neighbouring slot, then to a letter, when a label is taken", async () => {
@@ -239,14 +241,6 @@ describe("createPlace with a street", () => {
     expect(m.streetDeleteOne).not.toHaveBeenCalled();
   });
 
-  it("accepts the proposed name once the street has five houses", async () => {
-    m.streetFindOne.mockResolvedValue(readyStreet({ placeCount: 4 }));
-    await createPlace(makeReq({ json: { ...base, street: { streetId: STREET_ID } } }));
-    const [filter, update] = m.streetUpdateOne.mock.calls[1];
-    expect(filter).toMatchObject({ nameStatus: "proposed", nameSource: "community", placeCount: { $gte: 5 } });
-    expect(update).toEqual({ $set: { nameStatus: "accepted" } });
-  });
-
   it("still creates a place without a street (code only)", async () => {
     const res = await createPlace(makeReq({ json: base }));
     expect(res.status).toBe(201);
@@ -258,13 +252,21 @@ describe("createPlace with a street", () => {
 
 describe("deletePlace with a street", () => {
   it("retires the label and lowers the counter", async () => {
-    m.placeFindOneAndDelete.mockResolvedValue({ _id: "p1", streetId: STREET_ID });
+    m.placeFindOneAndDelete.mockResolvedValue({ _id: "p1", streetId: STREET_ID, status: "live" });
     const { newDeviceToken } = await import("../../../../utils/deviceToken.js");
     const { token } = newDeviceToken();
     const res = await deletePlace(makeReq({ cookie: token }), "YDE-7K4M");
     expect(res.status).toBe(200);
     expect(m.labelUpdateOne).toHaveBeenCalledWith({ placeId: "p1" }, { $set: { state: "retired" }, $unset: { placeId: "" } });
     expect(m.streetUpdateOne).toHaveBeenCalledWith({ _id: STREET_ID, placeCount: { $gt: 0 } }, { $inc: { placeCount: -1 } });
+  });
+
+  it("does not lower the counter for a place that was never approved", async () => {
+    m.placeFindOneAndDelete.mockResolvedValue({ _id: "p1", streetId: STREET_ID, status: "pending" });
+    const { newDeviceToken } = await import("../../../../utils/deviceToken.js");
+    await deletePlace(makeReq({ cookie: newDeviceToken().token }), "YDE-7K4M");
+    expect(m.labelUpdateOne).toHaveBeenCalled();
+    expect(m.streetUpdateOne).not.toHaveBeenCalled();
   });
 
   it("leaves labels alone for a place without a street", async () => {

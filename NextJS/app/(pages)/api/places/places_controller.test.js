@@ -36,7 +36,7 @@ function makeReq({ json, cookie, headers = {}, search = "" } = {}) {
 
 const stored = (overrides = {}) => ({
   code: "YDE-7K4M", name: "A", category: "home", city: "Yaoundé", region: "Centre", visibility: "link",
-  location: { type: "Point", coordinates: [11.5, 3.8] }, ownerId: "owner-1", ...overrides,
+  location: { type: "Point", coordinates: [11.5, 3.8] }, ownerId: "owner-1", status: "live", ...overrides,
 });
 
 beforeEach(() => {
@@ -51,12 +51,13 @@ describe("createPlace", () => {
     const res = await createPlace(makeReq({ json: { ...body, status: "hidden", ownerId: "me", code: "AAA-2222" } }));
     expect(res.status).toBe(201);
     const doc = m.create.mock.calls[0][0];
-    expect(doc.status).toBe("live");
+    expect(doc.status).toBe("pending");
     expect(doc.ownerId).not.toBe("me");
     expect(doc.code).toMatch(/^YDE-/);
     expect(doc.visibility).toBe("link");
     expect(res.cookies.get(DEVICE_COOKIE)?.value).toBeTruthy();
     const out = await res.json();
+    expect(out).toMatchObject({ status: "pending", refusal: null, isOwner: true });
     expect(out).not.toHaveProperty("ownerId");
     expect(out.isOwner).toBe(true);
     // The management key is shown once; only its hash is stored.
@@ -107,8 +108,20 @@ describe("getPlaceByCode", () => {
     m.findOne.mockResolvedValue(stored());
     const res = await getPlaceByCode(makeReq(), "yde-7k4m");
     expect(res.status).toBe(200);
-    expect(m.findOne).toHaveBeenCalledWith({ code: "YDE-7K4M", status: "live" });
-    expect((await res.json()).isOwner).toBe(false);
+    expect(m.findOne).toHaveBeenCalledWith({ code: "YDE-7K4M", status: { $in: ["live", "pending", "refused"] } });
+    const out = await res.json();
+    expect(out.isOwner).toBe(false);
+    expect(out).not.toHaveProperty("status");
+  });
+
+  it("shows a pending or refused place only to its owner, with the refusal reason", async () => {
+    m.findOne.mockResolvedValue(stored({ status: "pending" }));
+    expect((await getPlaceByCode(makeReq(), "YDE-7K4M")).status).toBe(404);
+    const { id, token } = newDeviceToken();
+    m.findOne.mockResolvedValue(stored({ status: "refused", ownerId: id, review: { reason: "wrong_spot", note: "Pin in the river", at: new Date() } }));
+    const res = await getPlaceByCode(makeReq({ cookie: token }), "YDE-7K4M");
+    expect(res.status).toBe(200);
+    expect(await res.json()).toMatchObject({ isOwner: true, status: "refused", refusal: { reason: "wrong_spot", note: "Pin in the river" } });
   });
 
   it("makes private places look missing except to their owner", async () => {

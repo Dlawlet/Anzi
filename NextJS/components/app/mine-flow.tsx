@@ -6,10 +6,11 @@ import { useI18n } from '@/i18n/provider'
 import type { Dict } from '@/i18n/dictionary'
 import { readLocalPlaces, removeLocalPlace, replaceLocalPlaces, saveLocalPlace } from '@/utils/localPlaces'
 import { addressTitle, placeWhere } from '@/utils/share'
-import type { PlaceView } from '@/types/place'
+import { isShareable, type PlaceView } from '@/types/place'
 import AddressPlate from './address-plate'
 import { CategoryIcon, ChevronIcon } from './icons'
 import PlaceActions from './place-actions'
+import ReviewNotice, { StatusLine } from './review-notice'
 import SaveCardButton from './save-card-button'
 import { inputClass, linkButton, primaryButton, secondaryButton } from './ui-classes'
 
@@ -111,7 +112,7 @@ export default function MineFlow() {
                 <span className="flex min-w-0 flex-1 flex-col">
                   <span className="line-clamp-2 break-words text-[17px] font-bold leading-[1.3]">{title}</span>
                   {sub && <span className="truncate text-[15px] text-muted">{sub}</span>}
-                  <span className="text-sm text-muted">{t.visibility.short[place.visibility]}</span>
+                  <StatusLine place={place} t={t} />
                 </span>
                 <ChevronIcon className={`h-5 w-5 flex-none text-muted transition-transform ${isOpen ? 'rotate-90' : ''}`} />
               </button>
@@ -202,10 +203,15 @@ function Details(props: {
         </p>
       )}
 
-      <PlaceActions place={place} t={t} lead="share" />
-      <SaveCardButton place={place} t={t} className={secondaryButton} />
+      <ReviewNotice place={place} t={t} />
+      {isShareable(place) && (
+        <>
+          <PlaceActions place={place} t={t} lead="share" />
+          <SaveCardButton place={place} t={t} className={secondaryButton} />
+        </>
+      )}
 
-      {managed ? (
+      {managed && place.status !== 'refused' ? (
         <>
           <fieldset disabled={busy}>
             <legend className="mb-2 text-base font-bold">{t.mine.visibilityLabel}</legend>
@@ -231,9 +237,9 @@ function Details(props: {
           </fieldset>
           <p role="status" className="text-base font-bold text-leaf">{message}</p>
         </>
-      ) : (
+      ) : !managed ? (
         <p className="text-base text-muted">{t.mine.localOnly}</p>
-      )}
+      ) : null}
 
       {error && <p role="alert" className="text-base font-bold text-danger">{error}</p>}
 

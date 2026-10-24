@@ -6,6 +6,11 @@ const m = vi.hoisted(() => ({
   streetFindOneAndUpdate: vi.fn(),
   placeFind: vi.fn(),
   placeUpdateOne: vi.fn(),
+  placeUpdateMany: vi.fn(),
+  placeFindOneAndUpdate: vi.fn(),
+  placeExists: vi.fn(),
+  streetUpdateOne: vi.fn(),
+  labelUpdateOne: vi.fn(),
   labelCreate: vi.fn(),
   rl: vi.fn(),
   trustedUpsert: vi.fn(),
@@ -17,17 +22,19 @@ const m = vi.hoisted(() => ({
 }));
 
 vi.mock("../../../../models/streetModel.js", () => ({
-  default: { find: m.streetFind, findOne: m.streetFindOne, findOneAndUpdate: m.streetFindOneAndUpdate, bulkWrite: m.streetBulkWrite },
+  default: { find: m.streetFind, findOne: m.streetFindOne, findOneAndUpdate: m.streetFindOneAndUpdate, bulkWrite: m.streetBulkWrite, updateOne: m.streetUpdateOne },
 }));
 vi.mock("../../../../models/postalCodeModel.js", () => ({
   default: { findOneAndUpdate: m.postalUpsert, deleteOne: m.postalDelete, find: m.postalFind },
 }));
-vi.mock("../../../../models/placeModel.js", () => ({ default: { find: m.placeFind, updateOne: m.placeUpdateOne } }));
-vi.mock("../../../../models/addressLabelModel.js", () => ({ default: { create: m.labelCreate } }));
+vi.mock("../../../../models/placeModel.js", () => ({
+  default: { find: m.placeFind, updateOne: m.placeUpdateOne, updateMany: m.placeUpdateMany, findOneAndUpdate: m.placeFindOneAndUpdate, exists: m.placeExists },
+}));
+vi.mock("../../../../models/addressLabelModel.js", () => ({ default: { create: m.labelCreate, updateOne: m.labelUpdateOne } }));
 vi.mock("../../../../models/trustedIpModel.js", () => ({ default: { findOneAndUpdate: m.trustedUpsert, deleteOne: m.trustedDelete } }));
 vi.mock("../../../../models/rateLimitModel.js", () => ({ default: { findOneAndUpdate: m.rl } }));
 
-import { getQueue, listPostalCodes, setPostalCode, setStreetLine, setStreetName, setTrustedIp, suggestStreetLine } from "./admin_controller.js";
+import { getQueue, listPostalCodes, reviewPlace, setPostalCode, setStreetLine, setStreetName, setTrustedIp, suggestStreetLine } from "./admin_controller.js";
 
 const TOKEN = "t".repeat(40);
 const ID = "66f1c0ffee0000000000abcd";
@@ -53,6 +60,12 @@ const waitingStreet = (extra = {}) => ({
   _id: ID, name: "Manguier", nameKey: "manguier", lang: "fr", nameStatus: "proposed", nameSource: "community", city: "Yaoundé",
   lineStatus: "waiting", placeCount: 2, geometry: { type: "Point", coordinates: at(100, -5) }, createdAt: new Date(), ...extra,
 });
+const PLACE_ID = "66f1c0ffee0000000000beef";
+const pendingPlace = (extra = {}) => ({
+  _id: PLACE_ID, code: "YDE-7K4M", name: "Chez Mama", category: "home", visibility: "link", status: "pending",
+  location: { type: "Point", coordinates: at(50, 5) }, accuracyM: 8, landmark: "Near the well", city: "Yaoundé", region: "Centre",
+  streetId: ID, numberStatus: "issued", houseNumber: 12, ownerId: "device-1", createdAt: new Date(), ...extra,
+});
 const readyStreet = (extra = {}) =>
   waitingStreet({
     lineStatus: "ready", originS: 0, baseSlot: 5, evenSide: "right", lineSource: "moderator",
@@ -67,6 +80,10 @@ beforeEach(() => {
   m.labelCreate.mockImplementation(async (doc) => ({ _id: "label", ...doc }));
   m.placeUpdateOne.mockResolvedValue({});
   m.placeFind.mockReturnValue(query([]));
+  m.placeUpdateMany.mockResolvedValue({});
+  m.streetUpdateOne.mockResolvedValue({});
+  m.labelUpdateOne.mockResolvedValue({});
+  m.placeExists.mockResolvedValue(null);
 });
 
 describe("admin authorization", () => {
@@ -94,15 +111,70 @@ describe("admin authorization", () => {
 });
 
 describe("getQueue", () => {
-  it("lists streets waiting for a line and provisional names", async () => {
-    m.streetFind.mockReturnValueOnce(query([waitingStreet({ nameStatus: "unnamed", name: undefined })])).mockReturnValueOnce(query([readyStreet()]));
+  it("lists places to review, streets waiting for a line and provisional names", async () => {
+    m.placeFind.mockReturnValueOnce(query([pendingPlace()]));
+    m.streetFind.mockReturnValueOnce(query([waitingStreet({ nameStatus: "unnamed", name: undefined })])).mockReturnValueOnce(query([readyStreet()])).mockReturnValueOnce(query([readyStreet()]));
     const res = await getQueue(makeReq());
     expect(res.status).toBe(200);
     const out = await res.json();
     expect(out.waiting[0]).toMatchObject({ id: ID, lineStatus: "waiting", placeCount: 2 });
     expect(out.waiting[0].anchor).toHaveLength(2);
     expect(out.proposed[0]).toMatchObject({ name: "Manguier", nameStatus: "proposed" });
+    expect(out.pending[0]).toMatchObject({ id: PLACE_ID, code: "YDE-7K4M", name: "Chez Mama", number: "12", landmark: "Near the well" });
+    expect(out.pending[0].street).toMatchObject({ id: ID, name: "Manguier", lineStatus: "ready" });
+    expect(m.placeFind).toHaveBeenCalledWith({ status: "pending" });
     expect(JSON.stringify(out)).not.toContain("proposedBy");
+    expect(JSON.stringify(out)).not.toContain("device-1");
+  });
+});
+
+describe("reviewPlace", () => {
+  it("needs the token, a valid id and a known decision", async () => {
+    expect((await reviewPlace(makeReq({ token: null, json: { action: "approve" } }), PLACE_ID)).status).toBe(401);
+    expect((await reviewPlace(makeReq({ json: { action: "approve" } }), "nope")).status).toBe(400);
+    expect((await reviewPlace(makeReq(), PLACE_ID)).status).toBe(400);
+    expect((await reviewPlace(makeReq({ json: { action: "delete" } }), PLACE_ID)).status).toBe(400);
+    expect((await reviewPlace(makeReq({ json: { action: "refuse", reason: "ugly" } }), PLACE_ID)).status).toBe(400);
+    expect((await reviewPlace(makeReq({ json: { action: "refuse", reason: "other" } }), PLACE_ID)).status).toBe(400); // "other" needs a note
+    expect((await reviewPlace(makeReq({ json: { action: "refuse", reason: "test", note: "x".repeat(201) } }), PLACE_ID)).status).toBe(400);
+    expect(m.placeFindOneAndUpdate).not.toHaveBeenCalled();
+  });
+
+  it("approves a pending place, which then counts on its street (five houses keep the proposed name)", async () => {
+    m.placeFindOneAndUpdate.mockResolvedValue(pendingPlace({ status: "live" }));
+    const res = await reviewPlace(makeReq({ json: { action: "approve" } }), PLACE_ID);
+    expect(res.status).toBe(200);
+    expect(m.placeFindOneAndUpdate.mock.calls[0].slice(0, 2)).toEqual([{ _id: PLACE_ID, status: "pending" }, { $set: { status: "live" } }]);
+    expect(m.streetUpdateOne.mock.calls[0]).toEqual([{ _id: ID }, { $inc: { placeCount: 1 } }]);
+    const [filter, update] = m.streetUpdateOne.mock.calls[1];
+    expect(filter).toMatchObject({ _id: ID, nameStatus: "proposed", nameSource: "community", placeCount: { $gte: 5 } });
+    expect(update).toEqual({ $set: { nameStatus: "accepted" } });
+  });
+
+  it("refuses with a reason and note kept for the owner, retires the number and hides an emptied waiting street", async () => {
+    m.placeFindOneAndUpdate.mockResolvedValue(pendingPlace());
+    const res = await reviewPlace(makeReq({ json: { action: "refuse", reason: "wrong_spot", note: "  Pin in the river " } }), PLACE_ID);
+    expect(res.status).toBe(200);
+    const [filter, update] = m.placeFindOneAndUpdate.mock.calls[0];
+    expect(filter).toEqual({ _id: PLACE_ID, status: "pending" });
+    expect(update.$set).toMatchObject({ status: "refused", numberStatus: "none", review: { reason: "wrong_spot", note: "Pin in the river" } });
+    expect(update.$unset).toHaveProperty("houseNumber");
+    expect(m.labelUpdateOne).toHaveBeenCalledWith({ placeId: PLACE_ID }, { $set: { state: "retired" }, $unset: { placeId: "" } });
+    expect(m.streetUpdateOne).toHaveBeenCalledWith({ _id: ID, lineStatus: "waiting", placeCount: 0 }, { $set: { status: "hidden" } });
+  });
+
+  it("keeps a street that other places use", async () => {
+    m.placeFindOneAndUpdate.mockResolvedValue(pendingPlace());
+    m.placeExists.mockResolvedValue({ _id: "other" });
+    await reviewPlace(makeReq({ json: { action: "refuse", reason: "duplicate" } }), PLACE_ID);
+    expect(m.streetUpdateOne).not.toHaveBeenCalled();
+  });
+
+  it("answers 409 for a place already decided and 404 for an unknown one", async () => {
+    m.placeFindOneAndUpdate.mockResolvedValue(null);
+    m.placeExists.mockResolvedValueOnce({ _id: PLACE_ID });
+    expect((await reviewPlace(makeReq({ json: { action: "approve" } }), PLACE_ID)).status).toBe(409);
+    expect((await reviewPlace(makeReq({ json: { action: "refuse", reason: "test" } }), PLACE_ID)).status).toBe(404);
   });
 });
 
@@ -184,15 +256,27 @@ describe("setStreetName", () => {
     expect((await setStreetName(makeReq({ json: { action: "accept" } }), ID)).status).toBe(409);
   });
 
-  it("clears a name that must go", async () => {
-    m.streetFindOne.mockResolvedValue(waitingStreet());
+  it("clears a name that must go and tells the proposer why on their places", async () => {
+    m.streetFindOne.mockResolvedValue(waitingStreet({ proposedBy: "device-1" }));
     m.streetFindOneAndUpdate.mockResolvedValue(waitingStreet({ nameStatus: "unnamed", name: undefined }));
-    expect((await setStreetName(makeReq({ json: { action: "reject" } }), ID)).status).toBe(200);
+    expect((await setStreetName(makeReq({ json: { action: "reject" } }), ID)).status).toBe(400); // a reason is needed
+    expect((await setStreetName(makeReq({ json: { action: "reject", reason: "not_local", note: "Locals say Rue des Palmiers" } }), ID)).status).toBe(200);
     const update = m.streetFindOneAndUpdate.mock.calls[0][1];
     expect(update.$set).toMatchObject({ nameStatus: "unnamed" });
     expect(update.$unset).toHaveProperty("name");
+    const [filter, notice] = m.placeUpdateMany.mock.calls[0];
+    expect(filter).toMatchObject({ streetId: ID, ownerId: "device-1" });
+    expect(notice.$set.nameNotice).toMatchObject({ name: "Manguier", reason: "not_local", note: "Locals say Rue des Palmiers" });
     m.streetFindOne.mockResolvedValue(waitingStreet({ nameStatus: "unnamed" }));
-    expect((await setStreetName(makeReq({ json: { action: "reject" } }), ID)).status).toBe(409);
+    expect((await setStreetName(makeReq({ json: { action: "reject", reason: "other", note: "x" } }), ID)).status).toBe(409);
+  });
+
+  it("clears the name notices once the street gets a new name", async () => {
+    m.streetFindOne.mockResolvedValue(waitingStreet({ nameStatus: "unnamed", name: undefined, nameKey: undefined }));
+    m.streetFind.mockReturnValue(query([]));
+    m.streetFindOneAndUpdate.mockResolvedValue(waitingStreet({ name: "Palmiers", nameStatus: "accepted" }));
+    expect((await setStreetName(makeReq({ json: { action: "set", name: "Palmiers" } }), ID)).status).toBe(200);
+    expect(m.placeUpdateMany).toHaveBeenCalledWith({ streetId: ID, nameNotice: { $exists: true } }, { $unset: { nameNotice: "" } });
   });
 
   it("renames a street, keeps the old name as an alias and checks the 2 km rule", async () => {

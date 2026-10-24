@@ -7,8 +7,9 @@ import { fmt } from '@/i18n/lang'
 import { readLocalPlaces } from '@/utils/localPlaces'
 import { addressLine, buildShareText, whatsappUrl } from '@/utils/share'
 import { SITE_URL } from '@/utils/site'
-import type { PlaceView } from '@/types/place'
+import { isShareable, type PlaceView } from '@/types/place'
 import { CategoryIcon, ChatIcon, ChevronIcon } from './icons'
+import { StatusLine } from './review-notice'
 
 // Up to three addresses saved on this phone; reads local storage only, so it also works offline.
 // Without any, `fallback` (the server-rendered how-it-works steps) is shown, also before this component hydrates.
@@ -57,9 +58,10 @@ export default function HomeMine({ fallback }: { fallback?: React.ReactNode }) {
                 <span className="flex min-w-0 flex-1 flex-col">
                   <span className="line-clamp-2 break-words text-[17px] font-bold leading-[1.3]">{title}</span>
                   {sub && <span className="truncate text-[15px] text-muted">{sub}</span>}
-                  <span className="text-sm text-muted">{t.visibility.short[place.visibility]}</span>
+                  <StatusLine place={place} t={t} />
                 </span>
               </Link>
+              {isShareable(place) && (
               <a
                 href={whatsappUrl(shareText)}
                 target="_blank"
@@ -69,6 +71,7 @@ export default function HomeMine({ fallback }: { fallback?: React.ReactNode }) {
                 <ChatIcon className="h-6 w-6" />
                 <span className="text-[13px] font-bold">{t.home.send}</span>
               </a>
+              )}
             </li>
           )
         })}

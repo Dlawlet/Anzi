@@ -4,7 +4,8 @@ import 'mapbox-gl/dist/mapbox-gl.css'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import type { Map as MapboxMap, GeoJSONSource } from 'mapbox-gl'
 
-// Moderator tool (owner only, desktop): trace the line of streets that wait for one, and fix street names.
+// Moderator tool (owner only, desktop): approve or refuse new addresses, trace the line of streets that wait for
+// one, and fix street names.
 // Everything the API returns is rendered as text. The token lives in memory only (typed again after a reload).
 type AdminStreet = {
   id: string
@@ -20,8 +21,42 @@ type AdminStreet = {
   line: [number, number][] | null
   createdAt: string
 }
+type AdminPlace = {
+  id: string
+  code: string
+  name: string
+  category: string
+  visibility: 'private' | 'link' | 'public'
+  point: [number, number]
+  accuracyM: number | null
+  pinAdjusted: boolean
+  landmark: string
+  quarter: string
+  city: string
+  region: string
+  number: string
+  street: { id: string; name: string; nameStatus: AdminStreet['nameStatus']; lineStatus: AdminStreet['lineStatus'] } | null
+  createdAt: string
+}
 type PostalRow = { city: string; quarter: string; postalCode: string }
-type Queue = { waiting: AdminStreet[]; proposed: AdminStreet[] }
+type Queue = { pending: AdminPlace[]; waiting: AdminStreet[]; proposed: AdminStreet[] }
+
+// Same keys as REFUSAL_REASONS / NAME_REFUSAL_REASONS (utils/placeValidation.js). The owner reads the matching
+// sentence from the FR/EN dictionary (t.review), plus the note typed here.
+const PLACE_REASONS: [string, string][] = [
+  ['no_building', 'No house or building at this spot'],
+  ['wrong_spot', 'Pin is not on the building'],
+  ['bad_name', 'Name has banned words, a phone number or an advert'],
+  ['duplicate', 'Address already exists'],
+  ['test', 'Looks like a test'],
+  ['other', 'Other (note required)'],
+]
+const NAME_REASONS: [string, string][] = [
+  ['unacceptable', 'Name not acceptable'],
+  ['not_local', 'Locals call the street something else'],
+  ['not_a_name', 'Not a street name'],
+  ['other', 'Other (note required)'],
+]
 type Point = [number, number]
 type Proposal = { line: Point[]; osmName: string; highway: string; lengthM: number; distanceM: number; sameName: boolean }
 
@@ -39,6 +74,9 @@ export default function AdminTool() {
   const [token, setToken] = useState('')
   const [queue, setQueue] = useState<Queue | null>(null)
   const [selected, setSelected] = useState<AdminStreet | null>(null)
+  const [review, setReview] = useState<AdminPlace | null>(null)
+  const [reason, setReason] = useState('')
+  const [note, setNote] = useState('')
   const [draft, setDraft] = useState<Point[]>([])
   const [message, setMessage] = useState('')
   const [busy, setBusy] = useState(false)
@@ -133,9 +171,11 @@ export default function AdminTool() {
         if (!map) return
         map.addSource('draft', { type: 'geojson', data: empty() })
         map.addSource('existing', { type: 'geojson', data: empty() })
+        map.addSource('review', { type: 'geojson', data: empty() })
         map.addLayer({ id: 'existing-line', type: 'line', source: 'existing', filter: ['==', '$type', 'LineString'], paint: { 'line-color': '#38bdf8', 'line-width': 4 } })
         map.addLayer({ id: 'draft-line', type: 'line', source: 'draft', filter: ['==', '$type', 'LineString'], paint: { 'line-color': '#f97316', 'line-width': 4 } })
         map.addLayer({ id: 'draft-points', type: 'circle', source: 'draft', filter: ['==', '$type', 'Point'], paint: { 'circle-radius': 6, 'circle-color': '#f97316', 'circle-stroke-color': '#fff', 'circle-stroke-width': 2 } })
+        map.addLayer({ id: 'review-point', type: 'circle', source: 'review', paint: { 'circle-radius': 9, 'circle-color': '#ef4444', 'circle-stroke-color': '#fff', 'circle-stroke-width': 3 } })
         map.addLayer({ id: 'draft-numbers', type: 'symbol', source: 'draft', filter: ['==', '$type', 'Point'], layout: { 'text-field': ['to-string', ['get', 'n']], 'text-offset': [0, -1.4], 'text-size': 13 }, paint: { 'text-color': '#fff', 'text-halo-color': '#000', 'text-halo-width': 1.5 } })
       })
       map.on('click', (e) => {
@@ -165,7 +205,48 @@ export default function AdminTool() {
     source?.setData(draft.length > 0 ? asLine(draft) : empty())
   }, [draft])
 
+  function showReviewPoint(place: AdminPlace | null) {
+    const source = mapRef.current?.getSource('review') as GeoJSONSource | undefined
+    source?.setData(place ? { type: 'FeatureCollection', features: [{ type: 'Feature', properties: {}, geometry: { type: 'Point', coordinates: place.point } }] } : empty())
+  }
+
+  function pickPlace(place: AdminPlace) {
+    setReview(place)
+    setSelected(null)
+    setDraft([])
+    setReason('')
+    setNote('')
+    setMessage('')
+    showReviewPoint(place)
+    const map = mapRef.current
+    map?.flyTo({ center: place.point, zoom: 19 })
+    ;(map?.getSource('existing') as GeoJSONSource | undefined)?.setData(empty())
+  }
+
+  // Approve makes the address findable; refuse keeps it for its owner only, with the reason and note shown to them.
+  async function decide(action: 'approve' | 'refuse') {
+    if (!review) return
+    setBusy(true)
+    try {
+      const body = action === 'approve' ? { action } : { action, reason, note }
+      const { ok, status, data } = await call(`/api/admin/places/${review.id}/review`, body)
+      if (!ok) setMessage(status === 409 ? 'Already decided (reload the queue).' : `Refused (${status}${data?.fields ? `, ${data.fields.join(', ')}` : ''}).`)
+      else {
+        setMessage(action === 'approve' ? `${review.code} approved: it can now be found.` : `${review.code} refused: its owner sees the reason in "Mes adresses".`)
+        setReview(null)
+        showReviewPoint(null)
+        await loadQueue()
+      }
+    } finally {
+      setBusy(false)
+    }
+  }
+
   function pick(street: AdminStreet) {
+    setReview(null)
+    showReviewPoint(null)
+    setReason('')
+    setNote('')
     setSelected(street)
     setDraft([])
     draftRef.current = []
@@ -235,10 +316,11 @@ export default function AdminTool() {
     if (!selected) return
     setBusy(true)
     try {
-      const { ok, status, data } = await call(`/api/admin/streets/${selected.id}/name`, { action, name: nameInput, lang, officialSource })
+      const extra = action === 'reject' ? { reason, note } : {}
+      const { ok, status, data } = await call(`/api/admin/streets/${selected.id}/name`, { action, name: nameInput, lang, officialSource, ...extra })
       if (!ok) setMessage(`Refused (${status}${data?.reason ? `, ${data.reason}` : data?.fields ? `, ${data.fields.join(', ')}` : ''}).`)
       else {
-        setMessage('Done.')
+        setMessage(action === 'reject' ? 'Name removed. The proposer sees the reason on their address.' : 'Done.')
         setSelected(null)
         await loadQueue()
       }
@@ -251,6 +333,22 @@ export default function AdminTool() {
   const input = 'rounded border border-gray-600 bg-gray-900 px-3 py-2 text-gray-100'
   const button = 'rounded bg-orange-500 px-4 py-2 font-semibold text-gray-900 disabled:opacity-50'
   const ghost = 'rounded border border-gray-500 px-4 py-2 text-gray-100 disabled:opacity-50'
+  const danger = 'rounded bg-red-500 px-4 py-2 font-semibold text-gray-900 disabled:opacity-50'
+  const reasonReady = reason !== '' && (reason !== 'other' || note.trim().length > 0)
+
+  const reasonFields = (id: string, reasons: [string, string][]) => (
+    <div className="space-y-2">
+      <label className="block text-sm" htmlFor={`${id}-reason`}>Reason (shown to the person)</label>
+      <select id={`${id}-reason`} className={`${input} w-full`} value={reason} onChange={(e) => setReason(e.target.value)}>
+        <option value="">Choose a reason</option>
+        {reasons.map(([key, text]) => (
+          <option key={key} value={key}>{text}</option>
+        ))}
+      </select>
+      <label className="block text-sm" htmlFor={`${id}-note`}>Note to the person (optional, plain words, 200 max)</label>
+      <textarea id={`${id}-note`} rows={2} className={`${input} w-full`} value={note} maxLength={200} onChange={(e) => setNote(e.target.value)} />
+    </div>
+  )
 
   return (
     <div className="grid min-h-screen grid-cols-[22rem_1fr] bg-gray-900 text-gray-100">
@@ -302,6 +400,19 @@ export default function AdminTool() {
         {queue && (
           <>
             <section>
+              <h2 className="mb-2 font-semibold">Addresses to review ({queue.pending.length})</h2>
+              <ul className="space-y-1">
+                {queue.pending.map((p) => (
+                  <li key={p.id}>
+                    <button className={`w-full rounded px-3 py-2 text-left ${review?.id === p.id ? 'bg-orange-500 text-gray-900' : 'bg-gray-800'}`} onClick={() => pickPlace(p)}>
+                      {p.name} · {[p.quarter, p.city].filter(Boolean).join(', ')} · {new Date(p.createdAt).toLocaleString()}
+                    </button>
+                  </li>
+                ))}
+                {queue.pending.length === 0 && <li className="text-sm text-gray-400">No address waiting for review.</li>}
+              </ul>
+            </section>
+            <section>
               <h2 className="mb-2 font-semibold">Waiting for a line ({queue.waiting.length})</h2>
               <ul className="space-y-1">
                 {queue.waiting.map((s) => (
@@ -324,6 +435,29 @@ export default function AdminTool() {
               </ul>
             </section>
           </>
+        )}
+
+        {review && (
+          <section className="space-y-3 rounded border border-gray-700 p-3">
+            <h2 className="font-semibold">{review.name}</h2>
+            <dl className="grid grid-cols-[7rem_1fr] gap-x-2 gap-y-1 text-sm">
+              <dt className="text-gray-400">Code</dt><dd>{review.code}</dd>
+              <dt className="text-gray-400">Category</dt><dd>{review.category}</dd>
+              <dt className="text-gray-400">Visibility</dt><dd>{review.visibility}</dd>
+              <dt className="text-gray-400">Street</dt>
+              <dd>{review.street ? `${review.street.name || 'Unnamed'} (${review.street.nameStatus}, line ${review.street.lineStatus})` : 'None (code only)'}</dd>
+              <dt className="text-gray-400">Number</dt><dd>{review.number || 'not issued yet'}</dd>
+              <dt className="text-gray-400">Where</dt><dd>{[review.quarter, review.city, review.region].filter(Boolean).join(', ')}</dd>
+              <dt className="text-gray-400">Landmark</dt><dd className="break-words">{review.landmark || '—'}</dd>
+              <dt className="text-gray-400">GPS</dt>
+              <dd>{review.accuracyM != null ? `±${Math.round(review.accuracyM)} m` : 'unknown'}{review.pinAdjusted ? ', pin moved by hand' : ''}</dd>
+              <dt className="text-gray-400">Created</dt><dd>{new Date(review.createdAt).toLocaleString()}</dd>
+            </dl>
+            <p className="text-sm text-gray-300">Red dot = the pin. Check that it sits on a building and that the name and landmark are clean.</p>
+            <button className={button} disabled={busy} onClick={() => decide('approve')}>Approve</button>
+            {reasonFields('place', PLACE_REASONS)}
+            <button className={danger} disabled={busy || !reasonReady} onClick={() => decide('refuse')}>Refuse</button>
+          </section>
         )}
 
         {selected && (
@@ -376,8 +510,13 @@ export default function AdminTool() {
                 <button className={button} disabled={busy || selected.nameStatus !== 'proposed'} onClick={() => nameAction('accept')}>Accept</button>
                 <button className={ghost} disabled={busy || nameInput.length < 2} onClick={() => nameAction('set')}>Set name</button>
                 <button className={ghost} disabled={busy || nameInput.length < 2 || officialSource.length < 3} onClick={() => nameAction('official')}>Set official</button>
-                <button className={ghost} disabled={busy || selected.nameStatus === 'unnamed'} onClick={() => nameAction('reject')}>Remove name</button>
               </div>
+              {selected.nameStatus !== 'unnamed' && (
+                <div className="space-y-2 border-t border-gray-700 pt-2">
+                  {reasonFields('name', NAME_REASONS)}
+                  <button className={danger} disabled={busy || !reasonReady} onClick={() => nameAction('reject')}>Remove name</button>
+                </div>
+              )}
             </div>
           </section>
         )}

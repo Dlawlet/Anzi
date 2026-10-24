@@ -363,6 +363,33 @@ export const fr = {
     code: 'Code Anzi',
     landmark: 'Repère',
   },
+  review: {
+    pendingTitle: 'En cours de vérification',
+    pendingText: "L'équipe Anzi vérifie votre adresse. Dès qu'elle est validée, les autres peuvent la trouver et vous pouvez la partager.",
+    pendingShort: 'En vérification',
+    refusedTitle: 'Adresse refusée',
+    refusedText: "L'équipe Anzi n'a pas validé cette adresse. Personne d'autre ne peut la voir.",
+    refusedShort: 'Refusée',
+    reasonLabel: 'Raison',
+    noteLabel: "Message de l'équipe",
+    retry: 'Créer à nouveau',
+    reasons: {
+      no_building: "Nous ne voyons pas de maison ou de bâtiment à cet endroit.",
+      wrong_spot: "Le point n'est pas posé sur le bâtiment.",
+      bad_name: 'Le nom contient des mots interdits, un numéro de téléphone ou une publicité.',
+      duplicate: 'Cette adresse existe déjà.',
+      test: 'Cela ressemble à un essai.',
+      other: 'Autre raison.',
+    },
+    nameTitle: 'Nom de rue refusé',
+    nameText: 'Le nom « {name} » que vous avez proposé a été retiré. Votre adresse reste valable.',
+    nameReasons: {
+      unacceptable: "Ce nom n'est pas acceptable.",
+      not_local: 'Les habitants appellent cette rue autrement.',
+      not_a_name: "Ce n'est pas un nom de rue.",
+      other: 'Autre raison.',
+    },
+  },
 } as const
 
 export type Widen<T> = T extends string ? string : { [K in keyof T]: Widen<T[K]> }
@@ -728,6 +755,33 @@ export const en: Dict = {
   share: {
     code: 'Anzi code',
     landmark: 'Landmark',
+  },
+  review: {
+    pendingTitle: 'Being checked',
+    pendingText: 'The Anzi team is checking your address. Once it is approved, others can find it and you can share it.',
+    pendingShort: 'Being checked',
+    refusedTitle: 'Address refused',
+    refusedText: 'The Anzi team did not approve this address. Nobody else can see it.',
+    refusedShort: 'Refused',
+    reasonLabel: 'Reason',
+    noteLabel: 'Message from the team',
+    retry: 'Create it again',
+    reasons: {
+      no_building: 'We cannot see a house or building at this spot.',
+      wrong_spot: 'The pin is not on the building.',
+      bad_name: 'The name has banned words, a phone number or an advert.',
+      duplicate: 'This address already exists.',
+      test: 'This looks like a test.',
+      other: 'Another reason.',
+    },
+    nameTitle: 'Street name refused',
+    nameText: 'The name "{name}" you proposed was removed. Your address is still valid.',
+    nameReasons: {
+      unacceptable: 'This name is not acceptable.',
+      not_local: 'People living here call this street something else.',
+      not_a_name: 'This is not a street name.',
+      other: 'Another reason.',
+    },
   },
 }
 

@@ -7,13 +7,14 @@ import TrustedIp from "../../../../models/trustedIpModel.js";
 import { POSTAL_CODE, placeKey } from "../../../../utils/postalCode.js";
 import { allow, clientIp, hashIp, sameOrigin } from "../../../../utils/rateLimit.js";
 import { OVERPASS_URL, overpassQuery, proposalsFrom } from "../../../../utils/osmTrace.js";
-import { allocateLabel, nameTakenNearby } from "../../../../utils/streetStore.js";
+import { NAME_REFUSAL_REASONS, REFUSAL_REASONS, validateReview } from "../../../../utils/placeValidation.js";
+import { allocateLabel, countPlace, nameTakenNearby, retireLabel, streetsById } from "../../../../utils/streetStore.js";
 import { validateStreetName } from "../../../../utils/streetNames.js";
 import { BASE_FULL, extendLine, validateLine } from "../../../../utils/streetNumbering.js";
 import { LANGS } from "../../../../utils/streetValidation.js";
 import { escapeRegex, isValidId } from "../../../../utils/validate.js";
 
-// Moderator tools: draw street lines, number the waiting places, fix street names.
+// Moderator tools: approve or refuse new places, draw street lines, number the waiting places, fix street names.
 // Authorization: Bearer <ADMIN_TOKEN> (server-only secret, at least 32 characters).
 const json = (body, status) => NextResponse.json(body, { status });
 const serverError = (error) => {
@@ -69,16 +70,41 @@ const adminStreet = (street) => ({
     createdAt: street.createdAt,
 });
 
-// GET /api/admin/queue : streets waiting for a line, and provisional names to accept or fix.
+// Admin view of a place to review: what the owner typed and where the pin is. No owner id, key or consent data.
+const adminPlace = (place, street) => ({
+    id: String(place._id),
+    code: place.code,
+    name: place.name,
+    category: place.category,
+    visibility: place.visibility,
+    point: place.location.coordinates,
+    accuracyM: place.accuracyM ?? null,
+    pinAdjusted: Boolean(place.pinAdjusted),
+    landmark: place.landmark || "",
+    quarter: place.quarter || "",
+    city: place.city,
+    region: place.region,
+    number: place.numberStatus === "issued" ? `${place.houseNumber}${place.houseSuffix || ""}` : "",
+    street: street ? { id: String(street._id), name: street.name || "", nameStatus: street.nameStatus, lineStatus: street.lineStatus } : null,
+    createdAt: place.createdAt,
+});
+
+// GET /api/admin/queue : places to review, streets waiting for a line, and provisional names to accept or fix.
 export const getQueue = async (req) => {
     try {
         const denied = await guardAdmin(req, false);
         if (denied) return denied;
-        const [waiting, proposed] = await Promise.all([
+        const [pending, waiting, proposed] = await Promise.all([
+            Place.find({ status: "pending" }).sort({ createdAt: 1 }).limit(QUEUE_LIMIT),
             Street.find({ status: "live", lineStatus: "waiting" }).sort({ createdAt: 1 }).limit(QUEUE_LIMIT),
             Street.find({ status: "live", nameStatus: "proposed" }).sort({ createdAt: 1 }).limit(QUEUE_LIMIT),
         ]);
-        return json({ waiting: waiting.map(adminStreet), proposed: proposed.map(adminStreet) }, 200);
+        const streets = await streetsById(pending);
+        return json({
+            pending: pending.map((p) => adminPlace(p, streets.get(String(p.streetId)))),
+            waiting: waiting.map(adminStreet),
+            proposed: proposed.map(adminStreet),
+        }, 200);
     } catch (error) {
         return serverError(error);
     }
@@ -86,7 +112,7 @@ export const getQueue = async (req) => {
 
 // Numbers the places that waited for a line, in creation order. A place too far from the new line stays waiting.
 async function numberWaitingPlaces(street) {
-    const places = await Place.find({ streetId: street._id, numberStatus: "waiting", status: "live" })
+    const places = await Place.find({ streetId: street._id, numberStatus: "waiting", status: { $in: ["live", "pending"] } })
         .sort({ createdAt: 1 })
         .limit(NUMBER_BATCH);
     let numbered = 0;
@@ -104,6 +130,74 @@ async function numberWaitingPlaces(street) {
         numbered++;
     }
     return { numbered, skipped };
+}
+
+// POST /api/admin/places/[id]/review { action: "approve" | "refuse", reason?, note? }
+// Approve: the place becomes findable and counts on its street. Refuse: it stays visible to its owner only, with the
+// reason and note, and its number is retired. Only a pending place can be decided (409 otherwise).
+export const reviewPlace = async (req, id) => {
+    try {
+        const denied = await guardAdmin(req, true);
+        if (denied) return denied;
+        if (!isValidId(id)) return json({ error: "Invalid id" }, 400);
+        const body = await readBody(req);
+        if (!body) return json({ error: "Invalid JSON body" }, 400);
+        const { errors, value } = validateReview(body, REFUSAL_REASONS);
+        if (errors.length > 0) return json({ error: "Invalid data", fields: errors }, 400);
+
+        if (value.action === "approve") {
+            const place = await Place.findOneAndUpdate({ _id: id, status: "pending" }, { $set: { status: "live" } }, { returnDocument: "after" });
+            if (!place) return (await Place.exists({ _id: id })) ? conflict("not_pending") : json({ error: "Not found" }, 404);
+            if (place.streetId) await countPlace(place.streetId);
+            return json({ place: { id, status: "live" } }, 200);
+        }
+
+        const place = await Place.findOneAndUpdate(
+            { _id: id, status: "pending" },
+            {
+                $set: { status: "refused", review: { reason: value.reason, note: value.note || undefined, at: new Date() }, numberStatus: "none" },
+                $unset: { houseNumber: "", houseSuffix: "", numberedAt: "", alongM: "", offsetM: "" },
+            },
+            { returnDocument: "before" }
+        );
+        if (!place) return (await Place.exists({ _id: id })) ? conflict("not_pending") : json({ error: "Not found" }, 404);
+        await retireLabel(place, false);
+        if (place.streetId) await dropEmptyStreet(place.streetId);
+        return json({ place: { id, status: "refused" } }, 200);
+    } catch (error) {
+        return serverError(error);
+    }
+};
+
+// A street still waiting for its line that no other live or pending place uses leaves the queue with the refusal.
+async function dropEmptyStreet(streetId) {
+    try {
+        if (await Place.exists({ streetId, status: { $in: ["live", "pending"] } })) return;
+        await Street.updateOne({ _id: streetId, lineStatus: "waiting", placeCount: 0 }, { $set: { status: "hidden" } });
+    } catch (error) {
+        console.error(error);
+    }
+}
+
+// The proposer's places on the street say the name was removed, and why, until the street gets a new name.
+async function noticeNameRefused(street, value) {
+    if (!street.proposedBy || !street.name) return;
+    try {
+        await Place.updateMany(
+            { streetId: street._id, ownerId: street.proposedBy, status: { $in: ["live", "pending"] } },
+            { $set: { nameNotice: { name: street.name, reason: value.reason, note: value.note || undefined, at: new Date() } } }
+        );
+    } catch (error) {
+        console.error(error);
+    }
+}
+
+async function clearNameNotices(streetId) {
+    try {
+        await Place.updateMany({ streetId, nameNotice: { $exists: true } }, { $unset: { nameNotice: "" } });
+    } catch (error) {
+        console.error(error);
+    }
 }
 
 // POST /api/admin/trust-ip { on: boolean, hours?: 1..72 } : trust (or stop trusting) the caller's own IP for testing.
@@ -213,7 +307,8 @@ export const setStreetLine = async (req, id) => {
     }
 };
 
-// POST /api/admin/streets/[id]/name { action: "set" | "official" | "accept" | "reject", name?, lang?, officialSource? }
+// POST /api/admin/streets/[id]/name { action: "set" | "official" | "accept" | "reject", name?, lang?, officialSource?, reason?, note? }
+// "reject" needs a reason (NAME_REFUSAL_REASONS): it is shown, with the note, on the proposer's places.
 export const setStreetName = async (req, id) => {
     try {
         const denied = await guardAdmin(req, true);
@@ -236,11 +331,14 @@ export const setStreetName = async (req, id) => {
 
         if (body.action === "reject") {
             if (street.nameStatus === "unnamed") return conflict("no_name");
+            const review = validateReview({ ...body, action: "refuse" }, NAME_REFUSAL_REASONS);
+            if (review.errors.length > 0) return json({ error: "Invalid data", fields: review.errors }, 400);
             const cleared = await Street.findOneAndUpdate(
                 { _id: id },
                 { $set: { nameStatus: "unnamed", nameSource: "community" }, $unset: { name: "", nameKey: "", lang: "", proposedBy: "" } },
                 { returnDocument: "after" }
             );
+            await noticeNameRefused(street, review.value);
             return json({ street: adminStreet(cleared) }, 200);
         }
 
@@ -273,6 +371,7 @@ export const setStreetName = async (req, id) => {
             };
         }
         const renamed = await Street.findOneAndUpdate({ _id: id }, update, { returnDocument: "after" });
+        await clearNameNotices(street._id);
         return json({ street: adminStreet(renamed) }, 200);
     } catch (error) {
         return serverError(error);

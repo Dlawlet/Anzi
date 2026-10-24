@@ -2,11 +2,12 @@
 
 import Link from 'next/link'
 import type { Dict } from '@/i18n/dictionary'
-import type { PlaceView } from '@/types/place'
+import { isShareable, type PlaceView } from '@/types/place'
 import AddressPlate from './address-plate'
 import Logo from './logo'
 import ManageKeyBox from './manage-key-box'
 import PlaceActions from './place-actions'
+import ReviewNotice from './review-notice'
 import SaveCardButton from './save-card-button'
 import ShareButton, { placeShareText } from './share-button'
 import { CategoryIcon } from './icons'
@@ -28,6 +29,7 @@ export default function CreateDone(props: {
   const english = place.street?.lang === 'en'
   const where = placeWhere(place)
   const category = (t.categories as Record<string, string>)[place.category]
+  const shareable = isShareable(place)
 
   return (
     <div className="-mx-4 -mt-6 bg-night-900 px-4 pb-8 pt-8 text-white md:mx-0 md:mt-0 md:rounded-3xl">
@@ -68,15 +70,24 @@ export default function CreateDone(props: {
         <p className="mt-3 text-sm text-night-300">{t.card.communityNote}</p>
       </article>
 
-      <p className="mt-5 text-base text-night-300">{d.next}</p>
-      {/* Sticky: "Partager" stays at the bottom of the screen while the card and the other actions scroll. */}
-      <div className="sticky bottom-0 z-10 -mx-4 mt-3 bg-night-900/95 px-4 py-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] backdrop-blur empty:hidden">
-        <ShareButton place={place} t={t} text={placeShareText(place, t)} className="btn btn-primary w-full" />
-      </div>
-      <div className="mt-2 flex flex-col gap-2">
-        <PlaceActions place={place} t={t} lead="share" whatsappTone="leaf" withShareSheet={false} />
-        <SaveCardButton place={place} t={t} className="btn bg-white text-night-900" />
-      </div>
+      {shareable ? (
+        <>
+          <p className="mt-5 text-base text-night-300">{d.next}</p>
+          {/* Sticky: "Partager" stays at the bottom of the screen while the card and the other actions scroll. */}
+          <div className="sticky bottom-0 z-10 -mx-4 mt-3 bg-night-900/95 px-4 py-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] backdrop-blur empty:hidden">
+            <ShareButton place={place} t={t} text={placeShareText(place, t)} className="btn btn-primary w-full" />
+          </div>
+          <div className="mt-2 flex flex-col gap-2">
+            <PlaceActions place={place} t={t} lead="share" whatsappTone="leaf" withShareSheet={false} />
+            <SaveCardButton place={place} t={t} className="btn bg-white text-night-900" />
+          </div>
+        </>
+      ) : (
+        // Nobody else can open it before the admin approves it: sharing would hand out a dead link.
+        <div className="mt-5">
+          <ReviewNotice place={place} t={t} />
+        </div>
+      )}
       {manageKey && <ManageKeyBox manageKey={manageKey} address={addressLine(place, t.card) || place.name} t={t} />}
       <p className="mt-3 text-center text-base text-night-300">{t.visibility.short[place.visibility]}. {d.savedOnDevice}</p>
 

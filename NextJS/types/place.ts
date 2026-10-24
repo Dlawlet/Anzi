@@ -29,7 +29,16 @@ export type PlaceView = {
   accuracyM: number | null
   visibility: 'private' | 'link' | 'public'
   isOwner: boolean
+  // Owner responses only (ownerPlace() in utils/placeValidation.js); absent = live.
+  status?: 'live' | 'pending' | 'refused'
+  refusal?: ReviewNotice | null
+  nameNotice?: (ReviewNotice & { name: string }) | null
 }
+
+export type ReviewNotice = { reason: string; note: string; at: string }
+
+// Not findable by others yet (waiting for the admin) or refused: nothing to share.
+export const isShareable = (place: Pick<PlaceView, 'status'>) => !place.status || place.status === 'live'
 
 // One row of GET /api/streets?near=lng,lat (streets_controller.js). `ideal` is null while the street waits for its line.
 export type NearStreet = PlaceStreet & {

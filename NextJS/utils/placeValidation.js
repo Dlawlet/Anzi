@@ -130,3 +130,35 @@ export function publicPlace(place, street = null) {
     visibility: place.visibility,
   };
 }
+
+// Moderation (docs/street-addressing.md): a new place waits for the admin; a refusal tells its owner why.
+export const PLACE_STATUSES = ["pending", "live", "refused", "hidden"];
+export const REFUSAL_REASONS = ["no_building", "wrong_spot", "bad_name", "duplicate", "test", "other"];
+export const NAME_REFUSAL_REASONS = ["unacceptable", "not_local", "not_a_name", "other"];
+const NOTE_MAX = 200;
+
+// Validates an admin decision. `reasons` is the list the refusal must pick from. The note is shown to the owner.
+export function validateReview(body, reasons) {
+  if (!body || typeof body !== "object" || Array.isArray(body)) return { errors: ["body"] };
+  const errors = [];
+  if (body.action !== "approve" && body.action !== "refuse") errors.push("action");
+  if (body.action === "refuse" && !reasons.includes(body.reason)) errors.push("reason");
+  const note = body.note == null || body.note === "" ? "" : clean(body.note, NOTE_MAX);
+  if (note === null) errors.push("note");
+  if (body.action === "refuse" && body.reason === "other" && !note) errors.push("note");
+  return errors.length > 0 ? { errors } : { errors, value: { action: body.action, reason: body.reason, note } };
+}
+
+const notice = (n) => (n && n.reason ? { reason: n.reason, note: n.note || "", at: n.at } : null);
+
+// What the owner sees of their own place: the public fields plus where moderation stands.
+export function ownerPlace(place, street = null) {
+  const nameNotice = notice(place.nameNotice);
+  return {
+    ...publicPlace(place, street),
+    isOwner: true,
+    status: place.status === "pending" || place.status === "refused" ? place.status : "live",
+    refusal: place.status === "refused" ? notice(place.review) : null,
+    nameNotice: nameNotice ? { ...nameNotice, name: place.nameNotice.name || "" } : null,
+  };
+}
